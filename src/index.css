@@ -1,0 +1,112 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Midnight Black & Orange Theme (Default) */
+    --background: #0a0a0a;
+    --foreground: #f5f5f5;
+    
+    --primary: #f97316; /* Orange 500 */
+    --primary-hover: #ea580c; /* Orange 600 */
+    
+    --secondary: #eab308; /* Yellow 500 / Gold */
+    
+    --accent: #262626; /* Neutral 800 */
+    
+    --card: rgba(23, 23, 23, 0.7); /* Neutral 900 with opacity */
+    --card-hover: rgba(38, 38, 38, 0.8);
+    
+    --border: rgba(249, 115, 22, 0.2); /* Subtle orange glow border */
+    --border-hover: rgba(249, 115, 22, 0.4);
+    
+    /* Yellowish/Gold Filter for transparent PNGs */
+    --logo-filter: brightness(0) saturate(100%) invert(75%) sepia(40%) saturate(2000%) hue-rotate(350deg) brightness(110%) contrast(105%);
+  }
+
+  /* Royal Ivory & Gold Theme */
+  [data-theme='royal-ivory'] {
+    --background: #fdfbf7;
+    --foreground: #1c1917;
+    --primary: #831843; /* Maroon */
+    --primary-hover: #9f1239;
+    --secondary: #d97706; /* Gold */
+    --accent: #f5eadd;
+    --card: rgba(255, 255, 255, 0.8);
+    --card-hover: rgba(255, 255, 255, 1);
+    --border: rgba(217, 119, 6, 0.3);
+    --border-hover: rgba(217, 119, 6, 0.5);
+    
+    /* Darker Gold for light background */
+    --logo-filter: brightness(0) saturate(100%) invert(48%) sepia(87%) saturate(1478%) hue-rotate(5deg) brightness(96%) contrast(92%);
+  }
+
+  /* Deep Ocean Blue Theme */
+  [data-theme='ocean-blue'] {
+    --background: #020617;
+    --foreground: #f8fafc;
+    --primary: #0ea5e9; /* Light Blue */
+    --primary-hover: #0284c7;
+    --secondary: #3b82f6; /* Blue */
+    --accent: #0f172a;
+    --card: rgba(15, 23, 42, 0.7);
+    --card-hover: rgba(30, 41, 59, 0.8);
+    --border: rgba(14, 165, 233, 0.2);
+    --border-hover: rgba(14, 165, 233, 0.4);
+    
+    /* Bright Yellow for dark ocean background */
+    --logo-filter: brightness(0) saturate(100%) invert(85%) sepia(35%) saturate(3000%) hue-rotate(345deg) brightness(110%) contrast(105%);
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased overflow-x-hidden;
+    background-image: radial-gradient(circle at top right, rgba(249, 115, 22, 0.05), transparent 40%),
+                      radial-gradient(circle at bottom left, rgba(234, 179, 8, 0.05), transparent 40%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-card backdrop-blur-md border border-border rounded-2xl shadow-xl transition-all duration-300;
+  }
+  
+  .glass-card:hover {
+    @apply bg-card-hover border-border-hover shadow-2xl;
+  }
+
+  .btn-primary {
+    @apply px-6 py-3 bg-primary text-white font-semibold rounded-full shadow-[0_0_15px_rgba(249,115,22,0.4)] hover:shadow-[0_0_25px_rgba(249,115,22,0.6)] hover:bg-primary-hover transition-all duration-300 transform hover:-translate-y-0.5;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 rounded-full font-bold transition-all border border-border bg-card text-foreground hover:bg-card-hover hover:border-primary shadow-lg;
+  }
+  
+  .font-bebas {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
