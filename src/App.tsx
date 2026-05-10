@@ -398,7 +398,7 @@ const AdminLogin = ({ children }: { children: React.ReactNode }) => {
               type="text" 
               value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full bg-accent/50 border border-border rounded-lg p-3 focus:border-primary outline-none transition-colors" 
+              className="w-full bg-black/40 border border-border rounded-lg p-3 focus:border-primary outline-none transition-colors text-white" 
               placeholder="admin@example.com" 
             />
           </div>
@@ -409,7 +409,7 @@ const AdminLogin = ({ children }: { children: React.ReactNode }) => {
               type="password" 
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full bg-accent/50 border border-border rounded-lg p-3 focus:border-primary outline-none transition-colors" 
+              className="w-full bg-black/40 border border-border rounded-lg p-3 focus:border-primary outline-none transition-colors text-white" 
               placeholder="••••••••" 
             />
           </div>
