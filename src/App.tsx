@@ -11,6 +11,14 @@ import News from './pages/News';
 import About from './pages/About';
 import { db } from './lib/db';
 
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
+
 const Navbar = () => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
@@ -422,13 +430,15 @@ const AdminLogin = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   React.useEffect(() => {
-    // Theme logic
-    const theme = localStorage.getItem('sahityotsav_theme') || 'default';
-    if (theme !== 'default') {
-      document.documentElement.setAttribute('data-theme', theme);
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
+    // Global Theme logic from Database
+    db.getSetting('theme').then((themeVal) => {
+      const theme = themeVal || 'default';
+      if (theme !== 'default') {
+        document.documentElement.setAttribute('data-theme', theme);
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+    });
 
     // Real Live Viewers Tracker
     const sessionId = Math.random().toString(36).substring(2, 15);
@@ -472,6 +482,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow">

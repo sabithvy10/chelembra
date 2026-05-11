@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  LayoutDashboard, Bell, Trophy, Calendar, Newspaper, 
+  Bell, Trophy, LayoutDashboard, Calendar, Newspaper, List, Menu,
   Image as ImageIcon, Video, Settings, Users, LogOut,
-  Plus, Trash2, Edit2, CheckCircle, UploadCloud, List, Medal, X, Eye, EyeOff
+  Plus, Trash2, Edit2, CheckCircle, UploadCloud, Medal, X, Eye, EyeOff
 } from 'lucide-react';
 import { db } from '../lib/db';
 
@@ -12,6 +12,7 @@ const TABS = ['Dashboard', 'Notifications', 'Results', 'Programs', 'Categories',
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [editingResultId, setEditingResultId] = useState<number | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleNavigateToResultEdit = async (resultId: number, notifId: number) => {
     await db.update('notifications', notifId, { status: 'resolved' });
@@ -25,51 +26,79 @@ export default function Admin() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground pb-20">
-      {/* Top Header */}
-      <header className="border-b border-border bg-card/50 p-6 flex justify-between items-center sticky top-0 z-40 backdrop-blur-md">
-        <h1 className="text-2xl font-bold text-primary">Admin Dashboard</h1>
-        <button 
-          onClick={handleLogout} 
-          className="flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-accent transition-colors"
-        >
-          <LogOut className="w-4 h-4" /> 
-          <span className="hidden sm:inline">Logout</span>
-        </button>
-      </header>
+    <div className="min-h-screen bg-background text-foreground flex overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 lg:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
 
-      <main className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
-        {/* Horizontal Navigation */}
-        <div className="flex overflow-x-auto gap-2 border-b border-border/50 pb-4 mb-8 scrollbar-hide">
-          {TABS.map((tab) => {
-            const icons: any = {
-              'Dashboard': <LayoutDashboard className="w-4 h-4" />,
-              'Notifications': <Bell className="w-4 h-4" />,
-              'Results': <Trophy className="w-4 h-4" />,
-              'Programs': <Calendar className="w-4 h-4" />,
-              'Categories': <List className="w-4 h-4" />,
-              'News': <Newspaper className="w-4 h-4" />,
-              'Gallery': <ImageIcon className="w-4 h-4" />,
-              'Videos': <Video className="w-4 h-4" />,
-              'Teams': <Users className="w-4 h-4" />,
-              'About': <List className="w-4 h-4" />,
-              'Settings': <Settings className="w-4 h-4" />
-            };
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-full whitespace-nowrap transition-all text-sm font-semibold ${
-                  activeTab === tab 
-                    ? 'bg-primary/20 text-primary border border-primary/30' 
-                    : 'text-foreground/70 hover:bg-card hover:text-foreground border border-transparent'
-                }`}
-              >
-                {icons[tab]} {tab}
-              </button>
-            );
-          })}
+      {/* Sidebar Navigation */}
+      <aside className={`fixed lg:static top-0 left-0 h-full w-72 bg-card/90 border-r border-border/50 z-50 transform transition-transform duration-300 flex flex-col ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="p-6 border-b border-border/50 flex justify-between items-center bg-black/20">
+          <h1 className="text-2xl font-bold text-primary">Admin Panel</h1>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="lg:hidden p-2 text-foreground/60 hover:text-white rounded-lg hover:bg-white/10">
+            <X className="w-6 h-6" />
+          </button>
         </div>
+        <div className="flex-1 overflow-y-auto py-6 custom-scrollbar">
+          <nav className="space-y-2 px-4">
+            {TABS.map((tab) => {
+              const icons: any = {
+                'Dashboard': <LayoutDashboard className="w-5 h-5" />,
+                'Notifications': <Bell className="w-5 h-5" />,
+                'Results': <Trophy className="w-5 h-5" />,
+                'Programs': <Calendar className="w-5 h-5" />,
+                'Categories': <List className="w-5 h-5" />,
+                'News': <Newspaper className="w-5 h-5" />,
+                'Gallery': <ImageIcon className="w-5 h-5" />,
+                'Videos': <Video className="w-5 h-5" />,
+                'Teams': <Users className="w-5 h-5" />,
+                'About': <List className="w-5 h-5" />,
+                'Settings': <Settings className="w-5 h-5" />
+              };
+              return (
+                <button
+                  key={tab}
+                  onClick={() => { setActiveTab(tab); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold ${
+                    activeTab === tab 
+                      ? 'bg-primary/20 text-primary border border-primary/30' 
+                      : 'text-foreground/70 hover:bg-card hover:text-foreground border border-transparent'
+                  }`}
+                >
+                  {icons[tab]} {tab}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+        <div className="p-6 border-t border-border/50 bg-black/20">
+          <button 
+            onClick={handleLogout} 
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-colors font-bold"
+          >
+            <LogOut className="w-5 h-5" /> Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Wrapper */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+        {/* Mobile Header */}
+        <header className="lg:hidden border-b border-border bg-card/50 p-4 flex justify-between items-center sticky top-0 z-30 backdrop-blur-md">
+          <div className="flex items-center gap-4">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-black/40 rounded-lg border border-border text-primary hover:bg-primary/20 transition-colors">
+              <Menu className="w-6 h-6" />
+            </button>
+            <h2 className="text-xl font-bold text-primary">{activeTab}</h2>
+          </div>
+        </header>
+
+        {/* Scrollable Main Area */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 custom-scrollbar">
 
         {/* Tab Content */}
         <motion.div
@@ -92,7 +121,8 @@ export default function Admin() {
           )}
           {activeTab === 'Settings' && <SettingsTab />}
         </motion.div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
@@ -121,7 +151,14 @@ function AboutTab() {
 
   useEffect(() => {
     db.getSetting('about_data').then(val => {
-      if (val) { try { setData(JSON.parse(val)); } catch { setData(defaultData); } }
+      if (val) { 
+        try { 
+          const parsed = JSON.parse(val);
+          setData({ ...defaultData, ...parsed }); 
+        } catch { 
+          setData(defaultData); 
+        } 
+      }
       else setData(defaultData);
       setLoading(false);
     });
@@ -634,13 +671,14 @@ function TeamsTab() {
 }
 
 function SettingsTab() {
-  const [theme, setTheme] = useState(localStorage.getItem('sahityotsav_theme') || 'default');
+  const [theme, setTheme] = useState('default');
   const [eventDate, setEventDate] = useState(localStorage.getItem('sahityotsav_event_date') || '2026 MAY 23-24 CHELEMBRA');
   const [teams, setTeams] = useState<any[]>([]);
   const [viewers, setViewers] = useState(1);
 
   useEffect(() => {
     db.get('teams').then(setTeams);
+    db.getSetting('theme').then(val => { if (val) setTheme(val); });
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     
     const updateViewers = () => {
@@ -663,15 +701,14 @@ function SettingsTab() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleThemeChange = (newTheme: string) => {
+  const handleThemeChange = async (newTheme: string) => {
     setTheme(newTheme);
-    localStorage.setItem('sahityotsav_theme', newTheme);
+    await db.setSetting('theme', newTheme);
     if (newTheme !== 'default') {
       document.documentElement.setAttribute('data-theme', newTheme);
     } else {
       document.documentElement.removeAttribute('data-theme');
     }
-    window.location.reload();
   };
 
   const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -720,6 +757,13 @@ function SettingsTab() {
                 <span className="font-bold">Deep Ocean Blue</span>
               </div>
               {theme === 'ocean-blue' && <CheckCircle className="w-5 h-5 text-primary"/>}
+            </button>
+            <button onClick={() => handleThemeChange('emerald-green')} className={`w-full p-4 rounded-xl border flex justify-between items-center transition-colors ${theme === 'emerald-green' ? 'border-primary bg-primary/10' : 'border-border/50 hover:bg-card'}`}>
+              <div className="flex items-center gap-3">
+                <div className="w-6 h-6 rounded-full bg-gradient-to-r from-emerald-600 to-teal-400 shadow-md"></div>
+                <span className="font-bold">Emerald Green</span>
+              </div>
+              {theme === 'emerald-green' && <CheckCircle className="w-5 h-5 text-primary"/>}
             </button>
           </div>
         </div>

@@ -187,28 +187,60 @@ export default function Results() {
                       <p>No winners recorded for this program yet.</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {result.winners.map((winner: any, i: number) => (
-                        <div 
-                          key={i} 
-                          className={`relative p-4 rounded-xl border ${
-                            winner.place === 1 ? 'bg-secondary/10 border-secondary/30' : 
-                            winner.place === 2 ? 'bg-gray-400/10 border-gray-400/30' : 
-                            'bg-orange-800/10 border-orange-800/30'
-                          }`}
-                        >
-                          <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-black shadow-lg"
-                               style={{ backgroundColor: winner.place === 1 ? '#eab308' : winner.place === 2 ? '#9ca3af' : '#b45309' }}>
-                            {winner.place}
-                          </div>
-                          <h4 className="font-bold text-lg mb-1">{winner.name}</h4>
-                          <p className="text-sm font-semibold mb-3 text-foreground/80">{winner.team}</p>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="px-2 py-1 rounded bg-background/50 border border-border">Grade: {winner.grade}</span>
-                            <span className="font-bold text-primary">{winner.points} Pts</span>
-                          </div>
-                        </div>
-                      ))}
+                    <div>
+                      {(() => {
+                        const top3 = result.winners.filter((w: any) => w.place >= 1 && w.place <= 3).sort((a: any, b: any) => a.place - b.place);
+                        const others = result.winners.filter((w: any) => !w.place || w.place > 3);
+                        
+                        return (
+                          <>
+                            {top3.length > 0 && (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                                {top3.map((winner: any, i: number) => (
+                                  <div 
+                                    key={i} 
+                                    className={`relative p-4 rounded-xl border ${
+                                      winner.place === 1 ? 'bg-secondary/10 border-secondary/30' : 
+                                      winner.place === 2 ? 'bg-gray-400/10 border-gray-400/30' : 
+                                      'bg-orange-800/10 border-orange-800/30'
+                                    }`}
+                                  >
+                                    <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full flex items-center justify-center font-bold text-black shadow-lg"
+                                         style={{ backgroundColor: winner.place === 1 ? '#eab308' : winner.place === 2 ? '#9ca3af' : '#b45309' }}>
+                                      #{winner.place}
+                                    </div>
+                                    <h4 className="font-bold text-lg mb-1">{winner.name}</h4>
+                                    <p className="text-sm font-semibold mb-3 text-foreground/80">{winner.team}</p>
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="px-2 py-1 rounded bg-background/50 border border-border">Grade: {winner.grade || 'N/A'}</span>
+                                      <span className="font-bold text-primary">{winner.points} Pts</span>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {others.length > 0 && (
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-bold text-foreground/40 uppercase tracking-widest border-b border-border/50 pb-2 mb-3">Other Positions & Grades</h4>
+                                {others.map((winner: any, i: number) => (
+                                  <div key={i} className="flex justify-between items-center p-3 rounded-lg border border-border/50 bg-black/20 hover:bg-black/40 transition-colors">
+                                    <div>
+                                      <h4 className="font-bold text-sm md:text-base">{winner.name}</h4>
+                                      <p className="text-xs text-foreground/60">{winner.team}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      {winner.place && winner.place > 3 && <span className="text-xs px-2 py-1 bg-card rounded border border-border">#{winner.place}</span>}
+                                      {winner.grade && <span className="text-xs px-2 py-1 bg-card rounded border border-border">{winner.grade} Grade</span>}
+                                      {winner.points > 0 && <span className="font-bold text-primary text-sm">{winner.points} Pts</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>

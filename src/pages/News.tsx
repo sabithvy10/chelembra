@@ -82,7 +82,7 @@ export default function News() {
                   <Clock className="w-4 h-4" /> {expandedNews.date || new Date(expandedNews.created_at).toLocaleDateString()}
                 </div>
                 <h2 className="text-3xl font-serif font-bold mb-6">{expandedNews.title}</h2>
-                <div className="text-foreground/80 text-lg leading-relaxed whitespace-pre-wrap">
+                <div className="text-foreground/80 text-lg leading-relaxed whitespace-pre-wrap break-words w-full overflow-hidden">
                   {expandedNews.content}
                 </div>
               </div>
