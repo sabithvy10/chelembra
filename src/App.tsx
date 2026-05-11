@@ -137,13 +137,11 @@ const Home = () => {
   const [aboutData, setAboutData] = React.useState<any>({});
 
   React.useEffect(() => {
-    setTeams(db.get('teams').sort((a: any, b: any) => (b.points || 0) - (a.points || 0)));
+    db.get('teams').then(t => setTeams(t.sort((a: any, b: any) => (b.points || 0) - (a.points || 0))));
     const saved = localStorage.getItem('sahityotsav_my_team');
     if (saved) setMyTeamId(parseInt(saved));
-    const savedDate = localStorage.getItem('sahityotsav_event_date');
-    if (savedDate) setEventDate(savedDate);
-    const savedAbout = localStorage.getItem('sahityotsav_about');
-    if (savedAbout) setAboutData(JSON.parse(savedAbout));
+    db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
+    db.getSetting('about_data').then(val => { if (val) { try { setAboutData(JSON.parse(val)); } catch {} } });
   }, []);
 
   const handleSelectTeam = (id: number) => {

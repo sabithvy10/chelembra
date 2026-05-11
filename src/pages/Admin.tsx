@@ -13,8 +13,8 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('Dashboard');
   const [editingResultId, setEditingResultId] = useState<number | null>(null);
 
-  const handleNavigateToResultEdit = (resultId: number, notifId: number) => {
-    db.update('notifications', notifId, { status: 'resolved' });
+  const handleNavigateToResultEdit = async (resultId: number, notifId: number) => {
+    await db.update('notifications', notifId, { status: 'resolved' });
     setActiveTab('Results');
     setEditingResultId(resultId);
   };
@@ -102,38 +102,40 @@ export default function Admin() {
 // -------------------------------------------------------------
 
 function AboutTab() {
-  const [data, setData] = useState(() => {
-    const saved = localStorage.getItem('sahityotsav_about');
-    return saved ? JSON.parse(saved) : {
-      mission1: "Sahityotsav is the premier literary and cultural festival for the Chelembra sector. Our mission is to foster creativity, celebrate artistic expression, and unite students through a diverse range of competitive and collaborative events.",
-      mission2: "Every year, hundreds of participants gather to showcase their talents in writing, speech, performance, and visual arts, battling for the prestigious Sector Championship.",
-      stat1: "May 15-20, 2026",
-      stat1Label: "Festival Dates",
-      stat2: "Chelembra HQ",
-      stat2Label: "Main Venue",
-      stat3: "400+",
-      stat3Label: "Participants",
-      stat4: "54",
-      stat4Label: "Competitions",
-      homeDesc: "Sahityotsav is a grand literary and cultural festival representing the Chelembra sector. It is a platform that promotes creativity, literature, speech, performance, and teamwork. Through various competitions and events, it builds a spirit of talent, discipline, and unity among the youth.",
-      homeStat1: "50+",
-      homeStat1Label: "Programs",
-      homeStat2: "4",
-      homeStat2Label: "Teams",
-      homeStat3: "400+",
-      homeStat3Label: "Participants",
-      homeStat4: "100%",
-      homeStat4Label: "Spirit"
-    };
-  });
+  const [data, setData] = useState<any>({});
+  const [loading, setLoading] = useState(true);
 
-  const handleSave = (e: any) => {
+  const defaultData = {
+    mission1: "Sahityotsav is the premier literary and cultural festival for the Chelembra sector.",
+    mission2: "Every year, hundreds of participants gather to showcase their talents.",
+    stat1: "May 15-20, 2026", stat1Label: "Festival Dates",
+    stat2: "Chelembra HQ", stat2Label: "Main Venue",
+    stat3: "400+", stat3Label: "Participants",
+    stat4: "54", stat4Label: "Competitions",
+    homeDesc: "Sahityotsav is a grand literary and cultural festival representing the Chelembra sector.",
+    homeStat1: "50+", homeStat1Label: "Programs",
+    homeStat2: "4", homeStat2Label: "Teams",
+    homeStat3: "400+", homeStat3Label: "Participants",
+    homeStat4: "100%", homeStat4Label: "Spirit"
+  };
+
+  useEffect(() => {
+    db.getSetting('about_data').then(val => {
+      if (val) { try { setData(JSON.parse(val)); } catch { setData(defaultData); } }
+      else setData(defaultData);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleSave = async (e: any) => {
     e.preventDefault();
-    localStorage.setItem('sahityotsav_about', JSON.stringify(data));
+    await db.setSetting('about_data', JSON.stringify(data));
     alert('Details saved successfully!');
   };
 
   const handleChange = (e: any) => setData({ ...data, [e.target.name]: e.target.value });
+
+  if (loading) return <div className="text-center py-20 text-foreground/50">Loading...</div>;
 
   const renderInput = (label: string, name: string) => (
     <div>
@@ -187,7 +189,7 @@ function AboutTab() {
 
 function DashboardTab() {
   const [teams, setTeams] = useState<any[]>([]);
-  useEffect(() => { setTeams(db.get('teams')); }, []);
+  useEffect(() => { db.get('teams').then(setTeams); }, []);
 
   return (
     <div className="space-y-8">
@@ -218,15 +220,15 @@ function DashboardTab() {
 
 function NotificationsTab({ onNavigateToResult }: any) {
   const [notifications, setNotifications] = useState<any[]>([]);
-  useEffect(() => { setNotifications(db.get('notifications')); }, []);
+  useEffect(() => { db.get('notifications').then(setNotifications); }, []);
 
-  const handleStatus = (id: number, status: string) => {
+  const handleStatus = async (id: number, status: string) => {
     if (status === 'deleted') {
-      db.delete('notifications', id);
+      await db.delete('notifications', id);
     } else {
-      db.update('notifications', id, { status });
+      await db.update('notifications', id, { status });
     }
-    setNotifications(db.get('notifications'));
+    db.get('notifications').then(setNotifications);
   };
 
   const pending = notifications.filter(n => n.status === 'pending').length;
@@ -268,19 +270,19 @@ function NewsTab() {
   const [news, setNews] = useState<any[]>([]);
   const [formData, setFormData] = useState({ title: '', content: '', image: '' });
 
-  useEffect(() => { setNews(db.get('news')); }, []);
+  useEffect(() => { db.get('news').then(setNews); }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) return;
-    db.insert('news', { ...formData, date: new Date().toLocaleDateString() });
-    setNews(db.get('news'));
+    await db.insert('news', { ...formData, date: new Date().toLocaleDateString() });
+    db.get('news').then(setNews);
     setFormData({ title: '', content: '', image: '' });
   };
 
-  const handleDelete = (id: number) => {
-    db.delete('news', id);
-    setNews(db.get('news'));
+  const handleDelete = async (id: number) => {
+    await db.delete('news', id);
+    db.get('news').then(setNews);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -359,19 +361,19 @@ function VideosTab() {
   const [videos, setVideos] = useState<any[]>([]);
   const [formData, setFormData] = useState({ title: '', url: '', description: '' });
 
-  useEffect(() => { setVideos(db.get('videos')); }, []);
+  useEffect(() => { db.get('videos').then(setVideos); }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) return;
-    db.insert('videos', formData);
-    setVideos(db.get('videos'));
+    await db.insert('videos', formData);
+    db.get('videos').then(setVideos);
     setFormData({ title: '', url: '', description: '' });
   };
 
-  const handleDelete = (id: number) => {
-    db.delete('videos', id);
-    setVideos(db.get('videos'));
+  const handleDelete = async (id: number) => {
+    await db.delete('videos', id);
+    db.get('videos').then(setVideos);
   };
 
   return (
@@ -420,30 +422,29 @@ function VideosTab() {
 function GalleryTab() {
   const [images, setImages] = useState<any[]>([]);
 
-  useEffect(() => { setImages(db.get('gallery')); }, []);
+  useEffect(() => { db.get('gallery').then(setImages); }, []);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        db.insert('gallery', { url: reader.result as string });
-        setImages(db.get('gallery'));
+      reader.onloadend = async () => {
+        await db.insert('gallery', { url: reader.result as string });
+        db.get('gallery').then(setImages);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleSyncDrive = () => {
-    // Simulate sync
-    db.insert('gallery', { url: `https://source.unsplash.com/random/400x400?festival,culture,${Date.now()}` });
-    setImages(db.get('gallery'));
+  const handleSyncDrive = async () => {
+    await db.insert('gallery', { url: `https://source.unsplash.com/random/400x400?festival,culture,${Date.now()}` });
+    db.get('gallery').then(setImages);
     alert('Simulated syncing 1 image from Google Drive!');
   };
 
-  const handleDelete = (id: number) => {
-    db.delete('gallery', id);
-    setImages(db.get('gallery'));
+  const handleDelete = async (id: number) => {
+    await db.delete('gallery', id);
+    db.get('gallery').then(setImages);
   };
 
   return (
@@ -508,37 +509,20 @@ function TeamsTab() {
   const [formData, setFormData] = useState({ name: '', points: '', color: 'from-primary to-secondary' });
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  const fetchData = () => {
-    let loadedTeams = db.get('teams');
-    
-    // Repair any duplicate IDs that might have been caused by fast clicking
-    const seenIds = new Set();
-    let hasDuplicates = false;
-    loadedTeams = loadedTeams.map((team: any) => {
-      if (seenIds.has(team.id)) {
-        hasDuplicates = true;
-        return { ...team, id: team.id + Math.random() };
-      }
-      seenIds.add(team.id);
-      return team;
-    });
-    
-    if (hasDuplicates) {
-      localStorage.setItem('sahityotsav_teams', JSON.stringify(loadedTeams));
-    }
-
+  const fetchData = async () => {
+    const loadedTeams = await db.get('teams');
     setTeams(loadedTeams);
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editingId) {
-      db.update('teams', editingId, { ...formData, points: parseInt(formData.points) || 0 });
+      await db.update('teams', editingId, { ...formData, points: parseInt(formData.points) || 0 });
       setEditingId(null);
     } else {
-      db.insert('teams', { ...formData, points: parseInt(formData.points) || 0 });
+      await db.insert('teams', { ...formData, points: parseInt(formData.points) || 0 });
     }
     setFormData({ name: '', points: '', color: 'from-primary to-secondary' });
     fetchData();
@@ -554,9 +538,9 @@ function TeamsTab() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if(confirm('Delete this team?')) {
-      db.delete('teams', id);
+      await db.delete('teams', id);
       fetchData();
     }
   };
@@ -635,7 +619,8 @@ function SettingsTab() {
   const [viewers, setViewers] = useState(1);
 
   useEffect(() => {
-    setTeams(db.get('teams'));
+    db.get('teams').then(setTeams);
+    db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     
     const updateViewers = () => {
       try {
@@ -645,12 +630,9 @@ function SettingsTab() {
           const now = Date.now();
           let count = 0;
           for (const id in activeUsers) {
-            // Count users who have pinged in the last 10 seconds
-            if (now - activeUsers[id] <= 10000) {
-              count++;
-            }
+            if (now - activeUsers[id] <= 10000) count++;
           }
-          setViewers(Math.max(count, 1)); // At least 1 (the admin)
+          setViewers(Math.max(count, 1));
         }
       } catch (e) {}
     };
@@ -671,10 +653,10 @@ function SettingsTab() {
     window.location.reload();
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.toUpperCase();
     setEventDate(val);
-    localStorage.setItem('sahityotsav_event_date', val);
+    await db.setSetting('event_date', val);
   };
 
   const maxPoints = Math.max(...teams.map(t => parseInt(t.points) || 0), 10);
@@ -832,13 +814,15 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
   const [additionalGrades, setAdditionalGrades] = useState<any[]>([]);
   const [posters, setPosters] = useState<string[]>([]);
 
-  const fetchData = () => {
-    setPrograms(db.get('programs'));
-    setTeams(db.get('teams'));
-    const res = db.get('results');
+  const fetchData = async () => {
+    const progs = await db.get('programs');
+    const tms = await db.get('teams');
+    const res = await db.get('results');
+    setPrograms(progs);
+    setTeams(tms);
     setResults(res);
     if (!editingId) {
-      const nextNum = res.length > 0 ? Math.max(...res.map((r:any) => parseInt(r.resultNumber) || 0)) + 1 : 1;
+      const nextNum = res.length > 0 ? Math.max(...res.map((r:any) => parseInt(r.result_number) || 0)) + 1 : 1;
       setFormData((prev: any) => ({...prev, resultNumber: nextNum.toString()}));
     }
   };
@@ -855,7 +839,7 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
     }
   }, [externalEditingId, results]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const program = programs.find(p => p.id.toString() === formData.programId);
@@ -896,24 +880,24 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
 
     // Save team point updates
     for (const t of currentTeams) {
-      db.update('teams', t.id, { points: t.points });
+      await db.update('teams', t.id, { points: t.points });
     }
 
     const newResult = {
-      programId: program.id,
+      program_id: program.id,
       title: program.title,
       category: program.category,
-      resultNumber: formData.resultNumber,
+      result_number: formData.resultNumber,
       timestamp: new Date().toLocaleString(),
       winners: winnersToSave,
       posters: posters
     };
 
     if (editingId) {
-      db.update('results', editingId, newResult);
+      await db.update('results', editingId, newResult);
       alert('Result updated successfully!');
     } else {
-      db.insert('results', newResult);
+      await db.insert('results', newResult);
       alert('Result published and team points updated successfully!');
     }
     
@@ -963,19 +947,18 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
     if(confirm('Delete result? This WILL reverse the team points given for this result!')) {
       const oldResult = results.find(r => r.id === id);
       if (oldResult && oldResult.winners) {
         for (const w of oldResult.winners) {
-          const teamId = teams.find(t => t.name === w.team)?.id;
-          if (teamId) {
-            const teamData = teams.find(t => t.id === teamId);
-            db.update('teams', teamId, { points: (parseInt(teamData.points) || 0) - parseInt(w.points) });
+          const teamData = teams.find(t => t.name === w.team);
+          if (teamData) {
+            await db.update('teams', teamData.id, { points: (parseInt(teamData.points) || 0) - parseInt(w.points) });
           }
         }
       }
-      db.delete('results', id);
+      await db.delete('results', id);
       fetchData();
     }
   };
@@ -991,8 +974,8 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
     });
   };
 
-  const handleToggleVisibility = (id: number, currentStatus: boolean) => {
-    db.update('results', id, { isHidden: !currentStatus });
+  const handleToggleVisibility = async (id: number, currentStatus: boolean) => {
+    await db.update('results', id, { is_hidden: !currentStatus });
     fetchData();
   };
 
@@ -1109,17 +1092,17 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
         <div className="space-y-4">
           {results.length === 0 && <p className="text-foreground/50">No results published yet.</p>}
           {results.map((r) => (
-            <div key={r.id} className={`bg-black/30 p-5 rounded-xl border flex flex-col gap-4 ${r.isHidden ? 'border-red-500/30 opacity-75' : 'border-border/50'}`}>
+            <div key={r.id} className={`bg-black/30 p-5 rounded-xl border flex flex-col gap-4 ${r.is_hidden ? 'border-red-500/30 opacity-75' : 'border-border/50'}`}>
               <div className="flex justify-between items-start">
                 <div>
                   <div className="flex items-center gap-3">
-                    <h4 className={`font-bold text-lg uppercase ${r.isHidden ? 'text-foreground/50' : 'text-primary'}`}>{r.title} - Result #{r.resultNumber}</h4>
-                    {r.isHidden && <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider">HIDDEN</span>}
+                    <h4 className={`font-bold text-lg uppercase ${r.is_hidden ? 'text-foreground/50' : 'text-primary'}`}>{r.title} - Result #{r.result_number}</h4>
+                    {r.is_hidden && <span className="bg-red-500/20 text-red-500 text-[10px] px-2 py-0.5 rounded-full font-bold tracking-wider">HIDDEN</span>}
                   </div>
                   {r.posters?.length > 0 && <p className="text-xs text-foreground/50 mt-1">{r.posters.length} poster(s) attached</p>}
                 </div>
                 <div className="flex gap-2">
-                  <button title={r.isHidden ? "Make Visible" : "Hide Result"} onClick={() => handleToggleVisibility(r.id, !!r.isHidden)} className={`${r.isHidden ? 'text-gray-400 hover:bg-gray-400/20' : 'text-green-500 hover:bg-green-500/20'} p-2 rounded`}>
+                  <button title={r.is_hidden ? "Make Visible" : "Hide Result"} onClick={() => handleToggleVisibility(r.id, !!r.is_hidden)} className={`${r.is_hidden ? 'text-gray-400 hover:bg-gray-400/20' : 'text-green-500 hover:bg-green-500/20'} p-2 rounded`}>
                     {r.isHidden ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                   </button>
                   <button title="Edit Result" onClick={() => handleEdit(r)} className="text-blue-500 hover:bg-blue-500/20 p-2 rounded"><Edit2 className="w-4 h-4"/></button>
@@ -1156,21 +1139,25 @@ function GenericCrudTab({ table }: { table: string }) {
   const [formData, setFormData] = useState<any>({});
   const [categories, setCategories] = useState<any[]>([]);
 
-  const fetchData = () => {
-    setData(db.get(table));
-    if (table !== 'categories') setCategories(db.get('categories'));
+  const fetchData = async () => {
+    const rows = await db.get(table);
+    setData(rows);
+    if (table !== 'categories') {
+      const cats = await db.get('categories');
+      setCategories(cats);
+    }
   };
   useEffect(() => { fetchData(); }, [table]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    db.insert(table, formData);
+    await db.insert(table, formData);
     fetchData();
     setFormData({});
   };
 
-  const handleDelete = (id: number) => {
-    if(confirm('Delete?')) { db.delete(table, id); fetchData(); }
+  const handleDelete = async (id: number) => {
+    if(confirm('Delete?')) { await db.delete(table, id); fetchData(); }
   };
 
   const columns = table === 'categories' ? ['name'] : ['title', 'category'];

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { MapPin, CalendarDays, Users, Trophy } from 'lucide-react';
+import { db } from '../lib/db';
 
 export default function About() {
   const [aboutData, setAboutData] = React.useState<any>({});
@@ -11,9 +12,12 @@ export default function About() {
     { name: 'Team D', color: 'from-primary to-primary-hover', desc: 'The striking artists of performance.' }
   ];
 
-  React.useEffect(() => {
-    const savedAbout = localStorage.getItem('sahityotsav_about');
-    if (savedAbout) setAboutData(JSON.parse(savedAbout));
+  useEffect(() => {
+    db.getSetting('about_data').then(val => {
+      if (val) {
+        try { setAboutData(JSON.parse(val)); } catch {}
+      }
+    });
   }, []);
 
   return (

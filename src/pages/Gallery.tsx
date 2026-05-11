@@ -8,17 +8,17 @@ export default function Gallery() {
   const [images, setImages] = useState<any[]>([]);
 
   useEffect(() => {
-    // If local db has no images, fallback to some default mock array
-    const dbImages = db.get('gallery');
-    if (dbImages.length > 0) {
-      setImages(dbImages);
-    } else {
-      setImages(Array.from({ length: 6 }, (_, i) => ({
-        id: `mock-${i}`,
-        url: `https://source.unsplash.com/random/800x${600 + (i % 3) * 100}?event,culture,${i}`,
-        title: `Festival Moment ${i + 1}`,
-      })));
-    }
+    db.get('gallery').then(dbImages => {
+      if (dbImages.length > 0) {
+        setImages(dbImages);
+      } else {
+        setImages(Array.from({ length: 6 }, (_, i) => ({
+          id: `mock-${i}`,
+          url: `https://source.unsplash.com/random/800x${600 + (i % 3) * 100}?event,culture,${i}`,
+          title: `Festival Moment ${i + 1}`,
+        })));
+      }
+    });
   }, []);
 
   const handleReport = (imgId: any) => {

@@ -11,9 +11,9 @@ export default function Results() {
   const [selectedCategory, setSelectedCategory] = useState('All');
 
   useEffect(() => {
-    setResults(db.get('results'));
-    setTeams(db.get('teams'));
-    setCategories(db.get('categories'));
+    db.get('results').then(setResults);
+    db.get('teams').then(setTeams);
+    db.get('categories').then(setCategories);
   }, []);
 
   const handleReport = (result: any) => {
@@ -25,14 +25,14 @@ export default function Results() {
         date: new Date().toLocaleDateString(),
         status: 'pending',
         type: 'result',
-        resultId: result.id
+        result_id: result.id
       });
       alert('Report submitted successfully. Admins will review it soon.');
     }
   };
 
   const filteredResults = results.filter(r => {
-    if (r.isHidden) return false;
+    if (r.is_hidden) return false;
     const searchLower = searchTerm.toLowerCase();
     const matchesSearch = 
       (r.title || '').toLowerCase().includes(searchLower) ||

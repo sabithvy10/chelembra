@@ -1,43 +1,58 @@
-// A simple LocalStorage-based mock database
+// Supabase-powered database layer
+// All methods are async and sync data across ALL devices
+import { supabase } from './supabase';
 
 export const db = {
-  get: (table: string) => {
-    const data = localStorage.getItem(`sahityotsav_${table}`);
-    return data ? JSON.parse(data) : [];
+  get: async (table: string): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) { console.error(`[db.get] ${table}:`, error.message); return []; }
+    return data || [];
   },
-  insert: (table: string, item: any) => {
-    const data = db.get(table);
-    // Use Math.random() to ensure uniqueness even if multiple items are added in the same millisecond
-    const newItem = { ...item, id: Date.now() + Math.random() };
-    localStorage.setItem(`sahityotsav_${table}`, JSON.stringify([newItem, ...data]));
-    return newItem;
+
+  insert: async (table: string, item: any): Promise<any> => {
+    const { data, error } = await supabase
+      .from(table)
+      .insert(item)
+      .select()
+      .single();
+    if (error) { console.error(`[db.insert] ${table}:`, error.message); return null; }
+    return data;
   },
-  delete: (table: string, id: number) => {
-    const data = db.get(table);
-    const newData = data.filter((item: any) => item.id !== id);
-    localStorage.setItem(`sahityotsav_${table}`, JSON.stringify(newData));
+
+  delete: async (table: string, id: number): Promise<void> => {
+    const { error } = await supabase.from(table).delete().eq('id', id);
+    if (error) console.error(`[db.delete] ${table}:`, error.message);
   },
-  update: (table: string, id: number, updates: any) => {
-    const data = db.get(table);
-    const newData = data.map((item: any) => item.id === id ? { ...item, ...updates } : item);
-    localStorage.setItem(`sahityotsav_${table}`, JSON.stringify(newData));
+
+  update: async (table: string, id: number, updates: any): Promise<any> => {
+    const { data, error } = await supabase
+      .from(table)
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) { console.error(`[db.update] ${table}:`, error.message); return null; }
+    return data;
+  },
+
+  // Settings helpers — stored in the `settings` table as key/value
+  getSetting: async (key: string): Promise<string | null> => {
+    const { data, error } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', key)
+      .single();
+    if (error || !data) return null;
+    return data.value;
+  },
+
+  setSetting: async (key: string, value: string): Promise<void> => {
+    const { error } = await supabase
+      .from('settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+    if (error) console.error(`[db.setSetting] ${key}:`, error.message);
   }
 };
-
-// Initialize with some dummy data if empty
-if (db.get('teams').length === 0) {
-  db.insert('teams', { name: 'Qudus', color: 'from-orange-500 to-orange-700', points: 510 });
-  db.insert('teams', { name: 'Undulus', color: 'from-orange-600 to-amber-800', points: 616 });
-  db.insert('teams', { name: 'Marakish', color: 'from-gray-300 to-gray-500', points: 647 });
-  db.insert('teams', { name: 'Dimashq', color: 'from-yellow-400 to-yellow-600', points: 659 });
-}
-
-if (db.get('categories').length === 0) {
-  db.insert('categories', { name: 'Universal' });
-  db.insert('categories', { name: 'Bachelor' });
-  db.insert('categories', { name: 'Kids' });
-}
-
-if (db.get('notifications').length === 0) {
-  db.insert('notifications', { title: 'Issue with: QAWWALI', by: 'resuk', date: '4/2/2026', status: 'pending' });
-}
