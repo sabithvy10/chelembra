@@ -10,6 +10,7 @@ import Videos from './pages/Videos';
 import News from './pages/News';
 import About from './pages/About';
 import { db } from './lib/db';
+import { supabase } from './lib/supabase';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -440,43 +441,24 @@ function App() {
       }
     });
 
-    // Real Live Viewers Tracker
+    // Real Live Viewers Tracker (Supabase Presence)
     const sessionId = Math.random().toString(36).substring(2, 15);
-    const pingPresence = () => {
-      try {
-        const activeUsersStr = localStorage.getItem('sahityotsav_active_users');
-        let activeUsers = activeUsersStr ? JSON.parse(activeUsersStr) : {};
-        
-        const now = Date.now();
-        // Clean up users inactive for more than 10 seconds
-        for (const id in activeUsers) {
-          if (now - activeUsers[id] > 10000) {
-            delete activeUsers[id];
-          }
-        }
-        
-        // Add self
-        activeUsers[sessionId] = now;
-        localStorage.setItem('sahityotsav_active_users', JSON.stringify(activeUsers));
-      } catch (e) {
-        console.error("Presence tracking failed", e);
-      }
-    };
+    const room = supabase.channel('online-users', {
+      config: {
+        presence: {
+          key: sessionId,
+        },
+      },
+    });
 
-    pingPresence();
-    const interval = setInterval(pingPresence, 3000);
+    room.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await room.track({ online_at: new Date().toISOString() });
+      }
+    });
 
     return () => {
-      clearInterval(interval);
-      // Clean up self immediately on unmount
-      try {
-        const activeUsersStr = localStorage.getItem('sahityotsav_active_users');
-        if (activeUsersStr) {
-          let activeUsers = JSON.parse(activeUsersStr);
-          delete activeUsers[sessionId];
-          localStorage.setItem('sahityotsav_active_users', JSON.stringify(activeUsers));
-        }
-      } catch (e) {}
+      supabase.removeChannel(room);
     };
   }, []);
 

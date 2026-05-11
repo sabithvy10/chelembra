@@ -6,6 +6,7 @@ import {
   Plus, Trash2, Edit2, CheckCircle, UploadCloud, Medal, X, Eye, EyeOff
 } from 'lucide-react';
 import { db } from '../lib/db';
+import { supabase } from '../lib/supabase';
 
 const TABS = ['Dashboard', 'Notifications', 'Results', 'Programs', 'Categories', 'News', 'Gallery', 'Videos', 'Teams', 'About', 'Settings'];
 
@@ -681,24 +682,22 @@ function SettingsTab() {
     db.getSetting('theme').then(val => { if (val) setTheme(val); });
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     
-    const updateViewers = () => {
-      try {
-        const activeUsersStr = localStorage.getItem('sahityotsav_active_users');
-        if (activeUsersStr) {
-          const activeUsers = JSON.parse(activeUsersStr);
-          const now = Date.now();
-          let count = 0;
-          for (const id in activeUsers) {
-            if (now - activeUsers[id] <= 10000) count++;
-          }
-          setViewers(Math.max(count, 1));
-        }
-      } catch (e) {}
-    };
+    const room = supabase.channel('online-users');
+    
+    room.on('presence', { event: 'sync' }, () => {
+      const newState = room.presenceState();
+      let count = 0;
+      for (const key in newState) {
+        count += newState[key].length;
+      }
+      setViewers(Math.max(count, 1));
+    });
 
-    updateViewers();
-    const interval = setInterval(updateViewers, 2000);
-    return () => clearInterval(interval);
+    room.subscribe();
+
+    return () => {
+      supabase.removeChannel(room);
+    };
   }, []);
 
   const handleThemeChange = async (newTheme: string) => {
