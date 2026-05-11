@@ -451,6 +451,16 @@ function App() {
       },
     });
 
+    room.on('presence', { event: 'sync' }, () => {
+      const newState = room.presenceState();
+      let count = 0;
+      for (const key in newState) {
+        count += newState[key].length;
+      }
+      localStorage.setItem('sahityotsav_live_viewers', count.toString());
+      window.dispatchEvent(new Event('viewersUpdated'));
+    });
+
     room.subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         await room.track({ online_at: new Date().toISOString() });

@@ -6,7 +6,6 @@ import {
   Plus, Trash2, Edit2, CheckCircle, UploadCloud, Medal, X, Eye, EyeOff
 } from 'lucide-react';
 import { db } from '../lib/db';
-import { supabase } from '../lib/supabase';
 
 const TABS = ['Dashboard', 'Notifications', 'Results', 'Programs', 'Categories', 'News', 'Gallery', 'Videos', 'Teams', 'About', 'Settings'];
 
@@ -682,21 +681,14 @@ function SettingsTab() {
     db.getSetting('theme').then(val => { if (val) setTheme(val); });
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     
-    const room = supabase.channel('online-users');
-    
-    room.on('presence', { event: 'sync' }, () => {
-      const newState = room.presenceState();
-      let count = 0;
-      for (const key in newState) {
-        count += newState[key].length;
-      }
-      setViewers(Math.max(count, 1));
-    });
-
-    room.subscribe();
+    const handleViewersUpdate = () => {
+      setViewers(parseInt(localStorage.getItem('sahityotsav_live_viewers') || '1'));
+    };
+    handleViewersUpdate();
+    window.addEventListener('viewersUpdated', handleViewersUpdate);
 
     return () => {
-      supabase.removeChannel(room);
+      window.removeEventListener('viewersUpdated', handleViewersUpdate);
     };
   }, []);
 
