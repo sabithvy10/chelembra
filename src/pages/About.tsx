@@ -5,12 +5,7 @@ import { db } from '../lib/db';
 
 export default function About() {
   const [aboutData, setAboutData] = React.useState<any>({});
-  const teams = [
-    { name: 'Team A', color: 'from-yellow-400 to-yellow-600', desc: 'The golden warriors of literature.' },
-    { name: 'Team B', color: 'from-gray-300 to-gray-500', desc: 'The silver knights of creativity.' },
-    { name: 'Team C', color: 'from-orange-600 to-amber-800', desc: 'The bronze scholars of art.' },
-    { name: 'Team D', color: 'from-primary to-primary-hover', desc: 'The striking artists of performance.' }
-  ];
+  const [dbTeams, setDbTeams] = React.useState<any[]>([]);
 
   useEffect(() => {
     db.getSetting('about_data').then(val => {
@@ -18,6 +13,7 @@ export default function About() {
         try { setAboutData(JSON.parse(val)); } catch {}
       }
     });
+    db.get('teams').then(setDbTeams);
   }, []);
 
   return (
@@ -69,7 +65,7 @@ export default function About() {
 
       <h2 className="text-4xl font-serif font-bold text-center mb-12">The Competing Teams</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {teams.map((team, i) => (
+        {dbTeams.map((team, i) => (
           <motion.div 
             key={team.name}
             initial={{ opacity: 0, y: 20 }}
@@ -77,8 +73,8 @@ export default function About() {
             transition={{ delay: i * 0.1 }}
             className="glass-card p-8 text-center relative overflow-hidden group"
           >
-            <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${team.color}`}></div>
-            <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-br ${team.color} opacity-20 group-hover:opacity-40 transition-opacity mb-4 flex items-center justify-center`}>
+            <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${team.color || 'from-primary to-secondary'}`}></div>
+            <div className={`w-20 h-20 mx-auto rounded-full bg-gradient-to-br ${team.color || 'from-primary to-secondary'} opacity-20 group-hover:opacity-40 transition-opacity mb-4 flex items-center justify-center`}>
               <Users className="w-8 h-8 text-foreground" />
             </div>
             <h3 className="text-2xl font-bold mb-2">{team.name}</h3>

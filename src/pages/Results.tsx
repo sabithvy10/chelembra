@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Trophy, Share2, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Trophy, Share2, AlertTriangle, Download, X } from 'lucide-react';
 import { db } from '../lib/db';
 
 export default function Results() {
@@ -9,6 +9,7 @@ export default function Results() {
   const [teams, setTeams] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedPoster, setSelectedPoster] = useState<string | null>(null);
 
   useEffect(() => {
     db.get('results').then(setResults);
@@ -29,6 +30,23 @@ export default function Results() {
       });
       alert('Report submitted successfully. Admins will review it soon.');
     }
+  };
+
+  const handleShare = (result: any) => {
+    if (!result.posters || result.posters.length === 0) {
+      alert('There is no poster attached to this result.');
+      return;
+    }
+    setSelectedPoster(result.posters[0]);
+  };
+
+  const handleDownload = (url: string) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sahityotsav-result-poster.jpg';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const filteredResults = results.filter(r => {
@@ -151,8 +169,11 @@ export default function Results() {
                     <h3 className="text-xl font-bold">{result.title}</h3>
                   </div>
                   <div className="flex gap-2">
-                    <button className="p-2 text-foreground/60 hover:text-primary transition-colors rounded-full hover:bg-card" title="Share">
+                    <button onClick={() => handleShare(result)} className="p-2 text-foreground/60 hover:text-primary transition-colors rounded-full hover:bg-card" title="Share Poster">
                       <Share2 className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => handleShare(result)} className="p-2 text-foreground/60 hover:text-green-500 transition-colors rounded-full hover:bg-card" title="Download Poster">
+                      <Download className="w-5 h-5" />
                     </button>
                     <button onClick={() => handleReport(result)} className="p-2 text-foreground/60 hover:text-red-500 transition-colors rounded-full hover:bg-card" title="Report Issue">
                       <AlertTriangle className="w-5 h-5" />
@@ -196,6 +217,45 @@ export default function Results() {
           )}
         </div>
       </section>
+
+      <AnimatePresence>
+        {selectedPoster && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-card w-full max-w-2xl rounded-2xl border border-border shadow-2xl flex flex-col overflow-hidden"
+            >
+              <div className="p-4 border-b border-border flex justify-between items-center bg-black/20">
+                <h3 className="font-bold text-lg text-primary">Result Poster</h3>
+                <button onClick={() => setSelectedPoster(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-foreground">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6 bg-black/40 flex flex-col items-center">
+                <div className="w-full aspect-[4/3] bg-black rounded-xl overflow-hidden mb-6 flex items-center justify-center">
+                  <img src={selectedPoster} alt="Result Poster" className="w-full h-full object-contain" />
+                </div>
+                <div className="flex gap-4">
+                  <button onClick={() => handleDownload(selectedPoster)} className="flex items-center gap-2 bg-primary text-black font-bold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors">
+                    <Download className="w-5 h-5" /> Download Poster
+                  </button>
+                  <button onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({ title: 'Sahityotsav Result', text: 'Check out this result!', url: window.location.href });
+                    } else {
+                      alert('Sharing is not supported on this device/browser.');
+                    }
+                  }} className="flex items-center gap-2 bg-secondary text-black font-bold px-6 py-3 rounded-lg hover:bg-secondary/90 transition-colors">
+                    <Share2 className="w-5 h-5" /> Share
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

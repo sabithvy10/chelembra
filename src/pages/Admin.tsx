@@ -269,15 +269,28 @@ function NotificationsTab({ onNavigateToResult }: any) {
 function NewsTab() {
   const [news, setNews] = useState<any[]>([]);
   const [formData, setFormData] = useState({ title: '', content: '', image: '' });
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => { db.get('news').then(setNews); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) return;
-    await db.insert('news', { ...formData, date: new Date().toLocaleDateString() });
+    
+    if (editingId) {
+      await db.update('news', editingId, { ...formData, date: new Date().toLocaleDateString() });
+      setEditingId(null);
+    } else {
+      await db.insert('news', { ...formData, date: new Date().toLocaleDateString() });
+    }
     db.get('news').then(setNews);
     setFormData({ title: '', content: '', image: '' });
+  };
+
+  const handleEdit = (item: any) => {
+    setEditingId(item.id);
+    setFormData({ title: item.title || '', content: item.content || '', image: item.image || '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
@@ -299,7 +312,10 @@ function NewsTab() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div className="glass-card p-6 rounded-2xl border border-border/50">
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Plus className="w-5 h-5"/> Add News Update</h3>
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+          {editingId ? <Edit2 className="w-5 h-5"/> : <Plus className="w-5 h-5"/>} 
+          {editingId ? 'Edit News Update' : 'Add News Update'}
+        </h3>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm mb-2 text-foreground/80">Title *</label>
@@ -329,8 +345,13 @@ function NewsTab() {
             </div>
           </div>
           <button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-3 rounded-lg transition-colors">
-            Add News
+            {editingId ? 'Update News' : 'Add News'}
           </button>
+          {editingId && (
+            <button type="button" onClick={() => {setEditingId(null); setFormData({title: '', content: '', image: ''});}} className="w-full bg-transparent border border-border text-foreground font-bold py-3 rounded-lg mt-2 hover:bg-card">
+              Cancel
+            </button>
+          )}
         </form>
       </div>
 
@@ -343,7 +364,7 @@ function NewsTab() {
               <div className="flex justify-between items-start mb-2">
                 <h4 className="font-bold text-lg text-primary uppercase">{item.title}</h4>
                 <div className="flex gap-2">
-                  <button className="text-yellow-500 hover:bg-yellow-500/20 p-1 rounded"><Edit2 className="w-4 h-4"/></button>
+                  <button onClick={() => handleEdit(item)} className="text-yellow-500 hover:bg-yellow-500/20 p-1 rounded"><Edit2 className="w-4 h-4"/></button>
                   <button onClick={() => handleDelete(item.id)} className="text-red-500 hover:bg-red-500/20 p-1 rounded"><Trash2 className="w-4 h-4"/></button>
                 </div>
               </div>
