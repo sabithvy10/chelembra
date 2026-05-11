@@ -144,6 +144,7 @@ const Home = () => {
   const [myTeamId, setMyTeamId] = React.useState<number | null>(null);
   const [eventDate, setEventDate] = React.useState('2026 MAY 23-24 CHELEMBRA');
   const [aboutData, setAboutData] = React.useState<any>({});
+  const [homeBg, setHomeBg] = React.useState('/hero-bg.jpg');
 
   React.useEffect(() => {
     db.get('teams').then(t => setTeams(t.sort((a: any, b: any) => (b.points || 0) - (a.points || 0))));
@@ -151,6 +152,7 @@ const Home = () => {
     if (saved) setMyTeamId(parseInt(saved));
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     db.getSetting('about_data').then(val => { if (val) { try { setAboutData(JSON.parse(val)); } catch {} } });
+    db.getSetting('home_bg').then(val => { if (val) setHomeBg(val); });
   }, []);
 
   const handleSelectTeam = (id: number) => {
@@ -167,7 +169,7 @@ const Home = () => {
         <div 
           className="absolute inset-0 z-0" 
           style={{
-            backgroundImage: 'url(/hero-bg.jpg)',
+            backgroundImage: `url(${homeBg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}

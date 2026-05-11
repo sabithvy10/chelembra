@@ -675,11 +675,13 @@ function SettingsTab() {
   const [eventDate, setEventDate] = useState(localStorage.getItem('sahityotsav_event_date') || '2026 MAY 23-24 CHELEMBRA');
   const [teams, setTeams] = useState<any[]>([]);
   const [viewers, setViewers] = useState(1);
+  const [homeBg, setHomeBg] = useState('');
 
   useEffect(() => {
     db.get('teams').then(setTeams);
     db.getSetting('theme').then(val => { if (val) setTheme(val); });
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
+    db.getSetting('home_bg').then(val => { if (val) setHomeBg(val); });
     
     const handleViewersUpdate = () => {
       setViewers(parseInt(localStorage.getItem('sahityotsav_live_viewers') || '1'));
@@ -706,6 +708,20 @@ function SettingsTab() {
     const val = e.target.value.toUpperCase();
     setEventDate(val);
     await db.setSetting('event_date', val);
+  };
+
+  const handleBgUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result as string;
+        setHomeBg(base64);
+        await db.setSetting('home_bg', base64);
+        alert('Background image updated successfully!');
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const maxPoints = Math.max(...teams.map(t => parseInt(t.points) || 0), 10);
@@ -773,6 +789,27 @@ function SettingsTab() {
             placeholder="e.g. 2026 MAY 23-24 CHELEMBRA" 
           />
           <p className="text-xs text-foreground/50 mt-2">This exactly controls the 4-part stylized string on the Home Page. The 2nd word turns red, the 4th turns yellow.</p>
+        </div>
+      </div>
+
+      {/* Background Image Settings */}
+      <div className="glass-card p-8 rounded-2xl border border-border/50">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><ImageIcon className="w-5 h-5"/> Home Page Background</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm mb-2 text-foreground/80 font-bold">Upload New Background Image</label>
+            <div className="relative w-full bg-black/40 border border-border rounded-lg p-3 hover:border-primary/50 transition-colors">
+              <input type="file" accept="image/*" onChange={handleBgUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+              <p className="text-foreground/60 text-sm font-semibold">Choose File <span className="font-normal text-xs ml-2">{homeBg ? 'Image uploaded' : 'No file chosen'}</span></p>
+            </div>
+            <p className="text-xs text-foreground/50 mt-2">Recommended size: 1920x1080 or higher. This will replace the default background.</p>
+          </div>
+          {homeBg && (
+            <div className="mt-4">
+              <p className="text-sm text-foreground/60 mb-2">Current Preview:</p>
+              <img src={homeBg} alt="BG Preview" className="w-full max-w-xs h-auto rounded-lg border border-border" />
+            </div>
+          )}
         </div>
       </div>
 

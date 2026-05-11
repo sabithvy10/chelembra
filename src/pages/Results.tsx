@@ -85,32 +85,68 @@ export default function Results() {
             <Trophy className="text-secondary w-8 h-8" /> Current Standings
           </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {teams.sort((a,b) => b.points - a.points).map((team, idx) => (
+        {/* Top 3 Positions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {teams.sort((a,b) => b.points - a.points).slice(0, 3).map((team, idx) => (
             <motion.div 
               key={team.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
-              className={`glass-card p-6 relative overflow-hidden ${idx === 0 ? 'border-secondary shadow-[0_0_15px_rgba(234,179,8,0.2)]' : ''}`}
+              className={`glass-card p-6 relative overflow-hidden ${
+                idx === 0 ? 'border-secondary shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 
+                idx === 1 ? 'border-blue-400/50' : 
+                idx === 2 ? 'border-amber-700/50' : ''
+              }`}
             >
               {idx === 0 && (
                 <div className="absolute top-0 right-0 bg-secondary text-black text-xs font-bold px-3 py-1 rounded-bl-lg">
                   CHAMPION
                 </div>
               )}
+              {idx === 1 && (
+                <div className="absolute top-0 right-0 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                  2ND PLACE
+                </div>
+              )}
+              {idx === 2 && (
+                <div className="absolute top-0 right-0 bg-amber-700 text-white text-xs font-bold px-3 py-1 rounded-bl-lg">
+                  3RD PLACE
+                </div>
+              )}
               <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${team.color || 'from-primary to-secondary'}`}></div>
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-2xl font-bold">{team.name}</h3>
-                <span className="text-4xl font-black text-foreground/20">#{idx + 1}</span>
+                <h3 className="text-xl font-bold truncate mr-2" title={team.name}>{team.name}</h3>
+                <span className="text-3xl font-black text-foreground/20">#{idx + 1}</span>
               </div>
               <div className="flex items-end gap-2">
-                <span className="text-5xl font-serif font-bold text-primary">{team.points}</span>
+                <span className="text-4xl font-serif font-bold text-primary">{team.points}</span>
                 <span className="text-sm text-foreground/60 mb-2 uppercase font-semibold">Points</span>
               </div>
             </motion.div>
           ))}
         </div>
+
+        {/* Other Positions */}
+        {teams.length > 3 && (
+          <div className="glass-card p-6">
+            <h3 className="text-xl font-serif font-bold mb-4 text-foreground/80">Other Positions</h3>
+            <div className="divide-y divide-border/50">
+              {teams.sort((a,b) => b.points - a.points).slice(3).map((team, idx) => (
+                <div key={team.id} className="flex justify-between items-center py-3">
+                  <div className="flex items-center gap-4">
+                    <span className="text-lg font-bold text-foreground/40 w-6">#{idx + 4}</span>
+                    <span className="font-semibold">{team.name}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold text-primary">{team.points}</span>
+                    <span className="text-xs text-foreground/60 uppercase">Pts</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Results Explorer */}
