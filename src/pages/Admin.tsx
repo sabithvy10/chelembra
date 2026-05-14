@@ -418,26 +418,44 @@ function NewsTab() {
 function VideosTab() {
   const [videos, setVideos] = useState<any[]>([]);
   const [formData, setFormData] = useState({ title: '', url: '', description: '' });
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   useEffect(() => { db.get('videos').then(setVideos); }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.title) return;
-    await db.insert('videos', formData);
+    
+    if (editingId) {
+      await db.update('videos', editingId, formData);
+      setEditingId(null);
+    } else {
+      await db.insert('videos', formData);
+    }
     db.get('videos').then(setVideos);
     setFormData({ title: '', url: '', description: '' });
   };
 
+  const handleEdit = (video: any) => {
+    setEditingId(video.id);
+    setFormData({ title: video.title || '', url: video.url || '', description: video.description || '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleDelete = async (id: number) => {
-    await db.delete('videos', id);
-    db.get('videos').then(setVideos);
+    if (confirm('Are you sure you want to delete this video?')) {
+      await db.delete('videos', id);
+      db.get('videos').then(setVideos);
+    }
   };
 
   return (
     <div className="space-y-8">
       <div className="glass-card p-6 rounded-2xl border border-border/50">
-        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Plus className="w-5 h-5"/> Add New Video</h3>
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+          {editingId ? <Edit2 className="w-5 h-5"/> : <Plus className="w-5 h-5"/>} 
+          {editingId ? 'Edit Video' : 'Add New Video'}
+        </h3>
         <form onSubmit={handleSubmit} className="space-y-5 max-w-3xl">
           <div>
             <label className="block text-sm mb-2 text-foreground/80">Title *</label>
@@ -448,9 +466,16 @@ function VideosTab() {
             <input required value={formData.url} onChange={e => setFormData({...formData, url: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none" placeholder="https://youtube.com/embed/..." />
             <p className="text-xs text-foreground/50 mt-1">For YouTube: Use embed URL</p>
           </div>
-          <button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 py-3 rounded-lg transition-colors">
-            Add Video
-          </button>
+          <div className="flex gap-3">
+            <button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-8 py-3 rounded-lg transition-colors">
+              {editingId ? 'Update Video' : 'Add Video'}
+            </button>
+            {editingId && (
+              <button type="button" onClick={() => {setEditingId(null); setFormData({title: '', url: '', description: ''});}} className="bg-transparent border border-border text-foreground font-bold px-8 py-3 rounded-lg hover:bg-card transition-colors">
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </div>
 
@@ -463,11 +488,14 @@ function VideosTab() {
                 <Video className="w-10 h-10 absolute inset-0 m-auto text-foreground/20" />
               </div>
               <div className="p-4 flex justify-between items-start">
-                <div>
+                <div className="flex-1 min-w-0">
                   <h4 className="font-bold line-clamp-1">{v.title}</h4>
                   <p className="text-xs text-foreground/50 truncate mt-1">{v.url}</p>
                 </div>
-                <button onClick={() => handleDelete(v.id)} className="text-red-500 p-1"><Trash2 className="w-4 h-4"/></button>
+                <div className="flex gap-2 ml-2">
+                  <button onClick={() => handleEdit(v)} className="text-yellow-500 p-1 hover:bg-yellow-500/20 rounded" title="Edit Video"><Edit2 className="w-4 h-4"/></button>
+                  <button onClick={() => handleDelete(v.id)} className="text-red-500 p-1 hover:bg-red-500/20 rounded" title="Delete Video"><Trash2 className="w-4 h-4"/></button>
+                </div>
               </div>
             </div>
           ))}
