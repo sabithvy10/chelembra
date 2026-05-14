@@ -144,7 +144,7 @@ const Home = () => {
   const [myTeamId, setMyTeamId] = React.useState<number | null>(null);
   const [eventDate, setEventDate] = React.useState('2026 MAY 23-24 CHELEMBRA');
   const [aboutData, setAboutData] = React.useState<any>({});
-  const [homeBg, setHomeBg] = React.useState('/hero-bg.jpg');
+  const [homeBg, setHomeBg] = React.useState(localStorage.getItem('sahityotsav_home_bg') || '');
 
   React.useEffect(() => {
     db.get('teams').then(t => setTeams(t.sort((a: any, b: any) => (b.points || 0) - (a.points || 0))));
@@ -152,7 +152,15 @@ const Home = () => {
     if (saved) setMyTeamId(parseInt(saved));
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     db.getSetting('about_data').then(val => { if (val) { try { setAboutData(JSON.parse(val)); } catch {} } });
-    db.getSetting('home_bg').then(val => { if (val) setHomeBg(val); });
+    db.getSetting('home_bg').then(val => { 
+      if (val) {
+        setHomeBg(val); 
+        localStorage.setItem('sahityotsav_home_bg', val);
+      } else {
+        setHomeBg(''); 
+        localStorage.removeItem('sahityotsav_home_bg');
+      }
+    });
   }, []);
 
   const handleSelectTeam = (id: number) => {
@@ -169,7 +177,7 @@ const Home = () => {
         <div 
           className="absolute inset-0 z-0" 
           style={{
-            backgroundImage: `url(${homeBg})`,
+            backgroundImage: homeBg ? `url(${homeBg})` : 'none',
             backgroundSize: 'cover',
             backgroundPosition: 'center',
           }}
