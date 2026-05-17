@@ -10,11 +10,49 @@ export default function Results() {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedPoster, setSelectedPoster] = useState<string | null>(null);
+  const [publishLimit, setPublishLimit] = useState<number | null>(null);
 
   useEffect(() => {
-    db.get('results').then(setResults);
-    db.get('teams').then(setTeams);
-    db.get('categories').then(setCategories);
+    Promise.all([
+      db.get('results'),
+      db.get('teams'),
+      db.get('categories'),
+      db.getSetting('publish_results_upto')
+    ]).then(([res, tms, cats, pubUpto]) => {
+      const limit = pubUpto ? parseInt(pubUpto) : null;
+      
+      const processedTeams = tms.map((team: any) => {
+        let allResultsPoints = 0;
+        let publishedPoints = 0;
+        
+        res.forEach((r: any) => {
+          const resNum = parseInt(r.result_number) || 0;
+          r.winners?.forEach((w: any) => {
+            if (w.team === team.name) {
+              const pts = parseInt(w.points) || 0;
+              allResultsPoints += pts;
+              if (limit === null || resNum <= limit) {
+                publishedPoints += pts;
+              }
+            }
+          });
+        });
+        
+        const initialPoints = (parseInt(team.points) || 0) - allResultsPoints;
+        return {
+          ...team,
+          points: initialPoints + publishedPoints
+        };
+      });
+
+      // Filter results to only show those up to the publish limit
+      const visibleResults = limit !== null ? res.filter(r => (parseInt(r.result_number) || 0) <= limit) : res;
+
+      setPublishLimit(limit);
+      setResults(visibleResults);
+      setTeams(processedTeams);
+      setCategories(cats);
+    });
   }, []);
 
   const handleReport = (result: any) => {
@@ -82,7 +120,7 @@ export default function Results() {
       <section className="mb-20">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-3xl font-serif font-bold flex items-center gap-3">
-            <Trophy className="text-secondary w-8 h-8" /> Current Standings
+            <Trophy className="text-secondary w-8 h-8" /> Current Standings {publishLimit !== null ? `After ${publishLimit} Results` : ''}
           </h2>
         </div>
         {/* Top 3 Positions */}

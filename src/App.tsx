@@ -140,18 +140,12 @@ const Footer = () => {
 };
 
 const Home = () => {
-  const [teams, setTeams] = React.useState<any[]>([]);
-  const [myTeamId, setMyTeamId] = React.useState<number | null>(null);
   const [eventDate, setEventDate] = React.useState('2026 MAY 23-24 CHELEMBRA');
-  const [aboutData, setAboutData] = React.useState<any>({});
   const [homeBg, setHomeBg] = React.useState(localStorage.getItem('sahityotsav_home_bg') || '');
 
   React.useEffect(() => {
-    db.get('teams').then(t => setTeams(t.sort((a: any, b: any) => (b.points || 0) - (a.points || 0))));
-    const saved = localStorage.getItem('sahityotsav_my_team');
-    if (saved) setMyTeamId(parseInt(saved));
+
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
-    db.getSetting('about_data').then(val => { if (val) { try { setAboutData(JSON.parse(val)); } catch {} } });
     db.getSetting('home_bg').then(val => { 
       if (val) {
         setHomeBg(val); 
@@ -162,13 +156,6 @@ const Home = () => {
       }
     });
   }, []);
-
-  const handleSelectTeam = (id: number) => {
-    setMyTeamId(id);
-    localStorage.setItem('sahityotsav_my_team', id.toString());
-  };
-
-  const maxPoints = Math.max(...teams.map(t => parseInt(t.points) || 0), 10);
 
   return (
     <div className="pt-20">
@@ -231,136 +218,80 @@ const Home = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4 }}
-            className="flex flex-wrap items-center justify-center gap-4"
+            className="flex items-center justify-center relative z-30 mb-16 md:mb-24"
           >
-            <Link to="/results" className="btn-primary flex items-center gap-2">
-              <Trophy className="w-5 h-5" /> Get Results
-            </Link>
-            <Link to="/gallery" className="btn-secondary flex items-center gap-2">
-              <ImageIcon className="w-5 h-5" /> View Gallery
-            </Link>
-            <Link to="/videos" className="btn-secondary flex items-center gap-2">
-              <Video className="w-5 h-5" /> Watch Videos
+            <Link 
+              to="/results" 
+              className="bg-[#facc15] hover:bg-[#eab308] text-black font-bold text-lg md:text-xl px-10 py-3 md:py-4 rounded-xl shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-transform hover:scale-105"
+            >
+              Get Results
             </Link>
           </motion.div>
         </div>
-      </section>
-
-      {/* Standings Preview */}
-      <section className="py-20 px-4 max-w-7xl mx-auto relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-serif font-bold mb-4">Current Standings</h2>
-          <p className="text-foreground/60 text-lg">Live updates from the festival grounds.</p>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {teams.slice(0, 4).map((team) => (
-            <motion.div 
-              key={team.id}
-              whileHover={{ y: -5 }}
-              className={`glass-card p-6 text-center relative overflow-hidden ${myTeamId === team.id ? 'border-primary shadow-[0_0_20px_rgba(249,115,22,0.3)]' : ''}`}
-            >
-              <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${team.color || 'from-primary to-secondary'}`}></div>
-              {myTeamId === team.id && <div className="absolute top-2 right-2 text-xs font-bold bg-primary/20 text-primary px-2 py-1 rounded">YOUR TEAM</div>}
-              <h3 className="text-2xl font-bold mb-2">{team.name}</h3>
-              <p className="text-5xl font-serif font-bold text-primary mb-4">{team.points}</p>
-              <span className="text-sm uppercase tracking-wider text-foreground/60 font-semibold">Points</span>
-            </motion.div>
-          ))}
-        </div>
+      {/* SVG Jagged Border */}
+      <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none z-20">
+        <svg viewBox="0 0 1200 120" preserveAspectRatio="none" className="block w-full h-[60px] md:h-[100px]">
+          <path d="M0,120 L0,70 L80,60 L200,90 L350,20 L500,80 L700,30 L900,90 L1050,40 L1200,70 L1200,120 Z" fill="#000000" />
+          <path d="M0,70 L80,60 L200,90 L350,20 L500,80 L700,30 L900,90 L1050,40 L1200,70" fill="none" stroke="#facc15" strokeWidth="4" />
+        </svg>
+      </div>
       </section>
 
       {/* About Preview */}
-      <section className="py-20 px-4 bg-card/30 border-y border-border">
-        <div className="max-w-5xl mx-auto text-center">
-          <h2 className="text-4xl font-serif font-bold mb-8">What is Sahityotsav?</h2>
-          <p className="text-xl text-foreground/80 leading-relaxed mb-12">
-            {aboutData.homeDesc || "Sahityotsav is a grand literary and cultural festival representing the Chelembra sector. It is a platform that promotes creativity, literature, speech, performance, and teamwork. Through various competitions and events, it builds a spirit of talent, discipline, and unity among the youth."}
-          </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div>
-              <p className="text-4xl font-bold text-primary mb-2">{aboutData.homeStat1 || "50+"}</p>
-              <p className="text-foreground/60">{aboutData.homeStat1Label || "Programs"}</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-secondary mb-2">{aboutData.homeStat2 || "4"}</p>
-              <p className="text-foreground/60">{aboutData.homeStat2Label || "Teams"}</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-primary mb-2">{aboutData.homeStat3 || "400+"}</p>
-              <p className="text-foreground/60">{aboutData.homeStat3Label || "Participants"}</p>
-            </div>
-            <div>
-              <p className="text-4xl font-bold text-secondary mb-2">{aboutData.homeStat4 || "100%"}</p>
-              <p className="text-foreground/60">{aboutData.homeStat4Label || "Spirit"}</p>
+      <section className="bg-black pt-10 pb-24 px-4 relative z-10">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          
+          {/* Typography Graphic */}
+          <div className="flex justify-center md:justify-end pr-0 md:pr-8">
+            <div className="flex flex-col items-start font-serif text-[70px] md:text-[100px] font-bold leading-[0.85] tracking-tight">
+              <div className="bg-[#facc15] text-black px-4 pt-4 pb-2">/ðɛn</div>
+              <div className="bg-[#facc15] text-black px-4 pt-2 pb-2">ænd</div>
+              <div className="bg-[#facc15] text-black px-4 pt-2 pb-4">stɪl/</div>
             </div>
           </div>
+
+          {/* Text Content */}
+          <div className="text-white/80 space-y-6 text-sm md:text-base leading-relaxed pl-0 md:pl-8">
+            <p>
+              Incepted 33 years ago in 1993, it has its commencement from the grassroot level -that is a family Sahityotsav. Crossing the levels of units,sectors, divisions,districts and 26 states in the country, it finds its actualization in the national level each year.
+            </p>
+            <p>
+              As a prime aim,Sahityotsav is focusing on the embellishment of the creativity of thousands and more students across the country, and now it became one of the towering figures in the realm Of cultural festivals of India.
+            </p>
+            <p>
+              Sahityotsav has its assets of thousands of young vibrant studentdom who have came forward to meet the need of the time in its various aspects. They are ready to question all the anti social hullabaloos using their talents like writing, drawing, criticizing... etc.
+            </p>
+            <button className="border border-[#facc15] text-[#facc15] px-8 py-3 mt-4 text-sm font-bold tracking-wider hover:bg-[#facc15] hover:text-black transition-colors uppercase">
+              Read More
+            </button>
+          </div>
+
         </div>
       </section>
 
-      {/* Team Performance Graph & Allegiance */}
-      <section className="py-20 px-4 max-w-7xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-serif font-bold mb-4">Live Performance</h2>
-          <p className="text-foreground/60 text-lg">Watch the race to the championship.</p>
-        </div>
-        
-        <div className="glass-card p-8 rounded-2xl border border-border/50 overflow-x-auto mb-16">
-          <div className="h-[400px] flex items-end gap-4 md:gap-12 justify-around pt-10 border-b-2 border-l-2 border-border/50 pb-2 pl-8 relative min-w-[500px]">
-            {/* Y axis */}
-            <div className="absolute left-2 top-0 h-full flex flex-col justify-between text-xs font-bold text-foreground/40 pb-2">
-              <span>{maxPoints}</span>
-              <span>{Math.floor(maxPoints * 0.75)}</span>
-              <span>{Math.floor(maxPoints * 0.5)}</span>
-              <span>{Math.floor(maxPoints * 0.25)}</span>
-              <span>0</span>
-            </div>
-
-            {teams.slice(0, 4).map((team) => {
-              const heightPct = ((parseInt(team.points) || 0) / maxPoints) * 100;
-              const isMyTeam = myTeamId === team.id;
-              return (
-                <div key={team.id} className="w-full max-w-[150px] md:max-w-[200px] flex flex-col justify-end items-center group h-full relative">
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-12 bg-black/80 backdrop-blur-sm border border-border px-3 py-1.5 rounded-lg text-sm whitespace-nowrap z-10 font-bold shadow-xl">
-                    {team.points} pts
-                  </div>
-                  {isMyTeam && (
-                    <div className="absolute -top-10 animate-bounce bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full z-10 shadow-lg">
-                      You
-                    </div>
-                  )}
-                  <div 
-                    className={`w-[80px] md:w-[120px] rounded-t-lg bg-gradient-to-t ${team.color || 'from-primary to-secondary'} transition-all duration-1000 shadow-[0_0_20px_rgba(255,255,255,0.05)] cursor-pointer relative overflow-hidden ${isMyTeam ? 'border-x-2 border-t-2 border-white' : ''}`}
-                    style={{ height: `${Math.max(heightPct, 2)}%` }}
-                  >
-                    <div className="absolute top-0 left-0 w-full h-2 bg-white/20"></div>
-                  </div>
-                  <span className="mt-4 font-bold text-sm md:text-lg text-center whitespace-normal break-words w-full px-1">
-                    {team.name}
-                  </span>
-                </div>
-              );
-            })}
+      {/* Tenderness of Signs Section */}
+      <section className="bg-black pb-24 px-4 relative z-10">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row shadow-2xl">
+          
+          {/* Image Side */}
+          <div className="w-full md:w-2/3 bg-white">
+            <img src="/tenderness.png" alt="The Tenderness of Signs" className="w-full h-full object-cover" />
           </div>
-        </div>
 
-        {/* My Team Selector */}
-        <div className="glass-card p-10 rounded-2xl border border-border/50 text-center max-w-4xl mx-auto relative overflow-hidden">
-          <div className="absolute top-0 w-full h-1 bg-gradient-to-r from-primary to-secondary left-0"></div>
-          <h3 className="text-3xl font-serif font-bold mb-4">Choose Your Allegiance</h3>
-          <p className="text-foreground/60 mb-8 text-lg">Select your team to highlight their performance across the dashboard!</p>
-          <div className="flex flex-wrap justify-center gap-4">
-            {teams.map(team => (
-              <button 
-                key={team.id}
-                onClick={() => handleSelectTeam(team.id)}
-                className={`px-8 py-4 rounded-xl font-bold transition-all border-2 flex items-center gap-2 ${myTeamId === team.id ? 'border-primary bg-primary/20 text-white shadow-[0_0_20px_rgba(249,115,22,0.4)] scale-105' : 'border-border/50 hover:border-primary/50 text-foreground/60 hover:text-white hover:bg-card'}`}
-              >
-                <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${team.color || 'from-primary to-secondary'}`}></div>
-                {team.name}
-              </button>
-            ))}
+          {/* Yellow Text Box Side */}
+          <div className="w-full md:w-1/3 bg-[#facc15] p-8 md:p-12 flex flex-col justify-center text-black">
+            <p className="font-semibold text-base md:text-lg leading-relaxed mb-8">
+              As a perennial journey of creativity Sahityotsav is now turning to its 32nd edition which is to be held at the capital city of state from August for 4-10 with multitudes of social cultural literary and artistic manifestations.
+            </p>
+            <Link 
+              to="/about" 
+              onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}
+              className="border-2 border-black text-black px-6 py-3 font-bold tracking-wider hover:bg-black hover:text-[#facc15] transition-colors uppercase w-fit text-sm text-center"
+            >
+              Read More
+            </Link>
           </div>
+
         </div>
       </section>
     </div>

@@ -226,29 +226,95 @@ function AboutTab() {
 
 function DashboardTab() {
   const [teams, setTeams] = useState<any[]>([]);
-  useEffect(() => { db.get('teams').then(setTeams); }, []);
+  const [results, setResults] = useState<any[]>([]);
+  const [publishUpto, setPublishUpto] = useState<string>('');
+
+  useEffect(() => { 
+    db.get('teams').then(setTeams); 
+    db.get('results').then(setResults);
+    db.getSetting('publish_results_upto').then(val => { if (val) setPublishUpto(val); });
+  }, []);
+
+  const handleUpdatePublishUpto = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await db.setSetting('publish_results_upto', publishUpto);
+    alert('Visibility settings updated successfully!');
+  };
+
+  const getTeamPointsInfo = (team: any) => {
+    let allResultsPoints = 0;
+    let publishedPoints = 0;
+    const limit = publishUpto ? parseInt(publishUpto) : 0;
+
+    results.forEach(r => {
+      const resNum = parseInt(r.result_number) || 0;
+      r.winners?.forEach((w: any) => {
+        if (w.team === team.name) {
+          const pts = parseInt(w.points) || 0;
+          allResultsPoints += pts;
+          if (resNum <= limit) {
+            publishedPoints += pts;
+          }
+        }
+      });
+    });
+
+    const initialPoints = (parseInt(team.points) || 0) - allResultsPoints;
+    const finalPublishedPoints = initialPoints + publishedPoints;
+
+    return {
+      current: parseInt(team.points) || 0,
+      published: finalPublishedPoints
+    };
+  };
 
   return (
     <div className="space-y-8">
       <div className="glass-card p-8 border border-border/50 rounded-2xl">
-        <h2 className="text-3xl font-bold text-primary">Hello, Admin! 👋</h2>
+        <h2 className="text-3xl font-bold text-primary mb-6">Hello, Admin! 👋</h2>
+        
+        <form onSubmit={handleUpdatePublishUpto} className="bg-black/30 p-6 rounded-xl border border-border/30 max-w-xl">
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2"><Eye className="w-5 h-5 text-primary"/> Public Results Visibility</h3>
+          <p className="text-sm text-foreground/60 mb-4">Set up to which result number the public users can see points and results.</p>
+          <div className="flex gap-4">
+            <input 
+              type="number" 
+              value={publishUpto} 
+              onChange={e => setPublishUpto(e.target.value)} 
+              className="flex-1 bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none" 
+              placeholder="e.g. 10 (Publish up to Result 10)" 
+            />
+            <button type="submit" className="bg-primary text-primary-foreground font-bold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors">
+              Update Visibility
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="glass-card p-8 rounded-2xl border border-border/50">
         <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Trophy className="w-5 h-5 text-primary"/> Team Points Overview</h3>
         <div className="space-y-3">
-          {teams.sort((a,b) => b.points - a.points).map((team, index) => (
-            <div key={team.id} className="bg-black/30 p-5 rounded-xl border border-border/30 flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div className="w-8 h-8 rounded-full bg-accent/50 flex items-center justify-center text-sm font-bold text-foreground/60">{index + 1}</div>
-                <span className="font-bold text-lg">{team.name}</span>
+          {teams.sort((a,b) => b.points - a.points).map((team, index) => {
+            const ptsInfo = getTeamPointsInfo(team);
+            return (
+              <div key={team.id} className="bg-black/30 p-5 rounded-xl border border-border/30 flex justify-between items-center">
+                <div className="flex items-center gap-4">
+                  <div className="w-8 h-8 rounded-full bg-accent/50 flex items-center justify-center text-sm font-bold text-foreground/60">{index + 1}</div>
+                  <span className="font-bold text-lg">{team.name}</span>
+                </div>
+                <div className="flex items-center gap-8 text-right">
+                  <div>
+                    <span className="text-xs text-foreground/50 block uppercase tracking-widest font-bold mb-1">Public Points</span>
+                    <span className="font-bold text-xl text-green-400">{ptsInfo.published}</span>
+                  </div>
+                  <div className="border-l border-border/50 pl-8">
+                    <span className="text-xs text-foreground/50 block uppercase tracking-widest font-bold mb-1">Current Total</span>
+                    <span className="font-bold text-2xl text-primary">{ptsInfo.current}</span>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-2 text-primary">
-                <span className="font-bold text-2xl">{team.points}</span>
-                <span className="text-sm text-foreground/60">points</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -641,7 +707,7 @@ function TeamsTab() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm mb-2 text-foreground/80">Team Name *</label>
-            <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none" placeholder="e.g. NASHEEDA" />
+            <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none" placeholder="Team NAme" />
           </div>
           <div>
             <label className="block text-sm mb-2 text-foreground/80">Starting Points</label>
@@ -704,12 +770,14 @@ function SettingsTab() {
   const [teams, setTeams] = useState<any[]>([]);
   const [viewers, setViewers] = useState(1);
   const [homeBg, setHomeBg] = useState('');
+  const [publishUpto, setPublishUpto] = useState('');
 
   useEffect(() => {
     db.get('teams').then(setTeams);
     db.getSetting('theme').then(val => { if (val) setTheme(val); });
     db.getSetting('event_date').then(val => { if (val) setEventDate(val); });
     db.getSetting('home_bg').then(val => { if (val) setHomeBg(val); });
+    db.getSetting('publish_results_upto').then(val => { if (val) setPublishUpto(val); });
     
     const handleViewersUpdate = () => {
       setViewers(parseInt(localStorage.getItem('sahityotsav_live_viewers') || '1'));
@@ -817,6 +885,33 @@ function SettingsTab() {
             placeholder="e.g. 2026 MAY 23-24 CHELEMBRA" 
           />
           <p className="text-xs text-foreground/50 mt-2">This exactly controls the 4-part stylized string on the Home Page. The 2nd word turns red, the 4th turns yellow.</p>
+        </div>
+      </div>
+
+      {/* Visibility Settings */}
+      <div className="glass-card p-8 rounded-2xl border border-border/50">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Eye className="w-5 h-5"/> Public Results Visibility</h3>
+        <div>
+          <label className="block text-sm mb-2 text-foreground/80 font-bold">Publish results up to Result Number</label>
+          <div className="flex gap-4">
+            <input 
+              type="number" 
+              value={publishUpto} 
+              onChange={e => setPublishUpto(e.target.value)} 
+              className="flex-1 bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none" 
+              placeholder="e.g. 10" 
+            />
+            <button 
+              onClick={async () => {
+                await db.setSetting('publish_results_upto', publishUpto);
+                alert('Visibility settings updated successfully!');
+              }} 
+              className="bg-primary text-primary-foreground font-bold px-6 py-3 rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Save Settings
+            </button>
+          </div>
+          <p className="text-xs text-foreground/50 mt-2">Points and results from competitions with a Result Number higher than this value will be hidden from users.</p>
         </div>
       </div>
 
@@ -1107,7 +1202,10 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
           <label className="block text-sm mb-2 text-foreground/80">Program *</label>
           <select required value={formData.programId} onChange={e => setFormData({...formData, programId: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none">
             <option value="">Select program</option>
-            {programs.map(p => <option key={p.id} value={p.id}>{p.title} ({p.category})</option>)}
+            {programs
+              .filter(p => editingId ? p.id.toString() === formData.programId || !results.some((r:any) => r.program_id === p.id) : !results.some((r:any) => r.program_id === p.id))
+              .map(p => <option key={p.id} value={p.id}>{p.title} ({p.category})</option>)
+            }
           </select>
         </div>
         <div>
@@ -1130,7 +1228,7 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
       <div className="border border-gray-400/30 rounded-xl p-6 bg-gray-400/5">
         <h4 className="font-bold text-gray-400 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Second Place Winners</h4>
         <div className="flex flex-col md:flex-row gap-8">
-          <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={false} />
+          <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={true} />
           <WinnerForm title="Winner 2" winner={second2} setWinner={setSecond2} teams={teams} isRequired={false} />
         </div>
       </div>
@@ -1139,7 +1237,7 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
       <div className="border border-amber-700/30 rounded-xl p-6 bg-amber-700/5">
         <h4 className="font-bold text-amber-600 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Third Place Winners</h4>
         <div className="flex flex-col md:flex-row gap-8">
-          <WinnerForm title="Winner 1" winner={third1} setWinner={setThird1} teams={teams} isRequired={false} />
+          <WinnerForm title="Winner 1" winner={third1} setWinner={setThird1} teams={teams} isRequired={true} />
           <WinnerForm title="Winner 2" winner={third2} setWinner={setThird2} teams={teams} isRequired={false} />
         </div>
       </div>
@@ -1259,6 +1357,7 @@ function GenericCrudTab({ table }: { table: string }) {
   const [data, setData] = useState<any[]>([]);
   const [formData, setFormData] = useState<any>({});
   const [categories, setCategories] = useState<any[]>([]);
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const fetchData = async () => {
     const rows = await db.get(table);
@@ -1272,9 +1371,20 @@ function GenericCrudTab({ table }: { table: string }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await db.insert(table, formData);
+    if (editingId) {
+      await db.update(table, editingId, formData);
+      setEditingId(null);
+    } else {
+      await db.insert(table, formData);
+    }
     fetchData();
     setFormData({});
+  };
+
+  const handleEdit = (record: any) => {
+    setEditingId(record.id);
+    setFormData(record);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
@@ -1286,7 +1396,10 @@ function GenericCrudTab({ table }: { table: string }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="glass-card p-6 rounded-2xl border border-border/50 lg:col-span-1 h-fit">
-        <h3 className="text-xl font-bold mb-6 capitalize">Add {table}</h3>
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+          {editingId ? <Edit2 className="w-5 h-5"/> : <Plus className="w-5 h-5"/>} 
+          {editingId ? `Edit ${table === 'categories' ? 'Category' : 'Program'}` : `Add ${table}`}
+        </h3>
         <form onSubmit={handleSubmit} className="space-y-4">
           {columns.map(col => (
             <div key={col}>
@@ -1311,7 +1424,14 @@ function GenericCrudTab({ table }: { table: string }) {
               )}
             </div>
           ))}
-          <button type="submit" className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-lg">Save</button>
+          <button type="submit" className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-lg hover:bg-primary/90 transition-colors">
+            {editingId ? 'Update' : 'Save'}
+          </button>
+          {editingId && (
+            <button type="button" onClick={() => {setEditingId(null); setFormData({});}} className="w-full bg-transparent border border-border text-foreground font-bold py-3 rounded-lg mt-2 hover:bg-card">
+              Cancel
+            </button>
+          )}
         </form>
       </div>
       
@@ -1320,12 +1440,15 @@ function GenericCrudTab({ table }: { table: string }) {
         <div className="space-y-3">
           {data.length === 0 && <p className="text-foreground/50">No records found.</p>}
           {data.map((record) => (
-            <div key={record.id} className="bg-black/30 p-4 rounded-xl border border-border/50 flex justify-between items-center">
+            <div key={record.id} className="bg-black/30 p-4 rounded-xl border border-border/50 flex justify-between items-center group hover:bg-black/40 transition-colors">
               <div>
                 <p className="font-bold">{record.title || record.name}</p>
                 {record.category && <p className="text-sm text-foreground/50">{record.category}</p>}
               </div>
-              <button onClick={() => handleDelete(record.id)} className="text-red-500 p-2"><Trash2 className="w-4 h-4"/></button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => handleEdit(record)} className="p-2 text-blue-500 bg-blue-500/10 rounded-lg hover:bg-blue-500/20" title="Edit"><Edit2 className="w-4 h-4"/></button>
+                <button onClick={() => handleDelete(record.id)} className="p-2 text-red-500 bg-red-500/10 rounded-lg hover:bg-red-500/20" title="Delete"><Trash2 className="w-4 h-4"/></button>
+              </div>
             </div>
           ))}
         </div>

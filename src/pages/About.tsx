@@ -32,10 +32,13 @@ export default function About() {
         <div className="glass-card p-8 md:p-12">
           <h2 className="text-3xl font-serif font-bold mb-6">Our Mission</h2>
           <p className="text-foreground/80 text-lg leading-relaxed mb-6">
-            {aboutData.mission1 || "Sahityotsav is the premier literary and cultural festival for the Chelembra sector. Our mission is to foster creativity, celebrate artistic expression, and unite students through a diverse range of competitive and collaborative events."}
+            Incepted 33 years ago in 1993, it has its commencement from the grassroot level -that is a family Sahityotsav. Crossing the levels of units,sectors, divisions,districts and 26 states in the country, it finds its actualization in the national level each year.
+          </p>
+          <p className="text-foreground/80 text-lg leading-relaxed mb-6">
+            As a prime aim,Sahityotsav is focusing on the embellishment of the creativity of thousands and more students across the country, and now it became one of the towering figures in the realm Of cultural festivals of India.
           </p>
           <p className="text-foreground/80 text-lg leading-relaxed">
-            {aboutData.mission2 || "Every year, hundreds of participants gather to showcase their talents in writing, speech, performance, and visual arts, battling for the prestigious Sector Championship."}
+            Sahityotsav has its assets of thousands of young vibrant studentdom who have came forward to meet the need of the time in its various aspects. They are ready to question all the anti social hullabaloos using their talents like writing, drawing, criticizing... etc.
           </p>
         </div>
 
