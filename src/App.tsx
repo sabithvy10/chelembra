@@ -241,13 +241,13 @@ const Home = () => {
       <section className="bg-black pt-10 pb-24 px-4 relative z-10">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
           
-          {/* Typography Graphic */}
+          {/* Typography Graphic -> Changed to Uploaded Image */}
           <div className="flex justify-center md:justify-end pr-0 md:pr-8">
-            <div className="flex flex-col items-start font-serif text-[70px] md:text-[100px] font-bold leading-[0.85] tracking-tight">
-              <div className="bg-[#facc15] text-black px-4 pt-4 pb-2">/ðɛn</div>
-              <div className="bg-[#facc15] text-black px-4 pt-2 pb-2">ænd</div>
-              <div className="bg-[#facc15] text-black px-4 pt-2 pb-4">stɪl/</div>
-            </div>
+            <img 
+              src="/about-eye.png" 
+              alt="About Sahityotsav" 
+              className="w-full max-w-[300px] md:max-w-[400px] h-auto object-contain drop-shadow-2xl" 
+            />
           </div>
 
           {/* Text Content */}
