@@ -356,8 +356,8 @@ function NotificationsTab({ onNavigateToResult }: any) {
             </div>
             <div className="flex gap-2">
               <button onClick={() => handleStatus(notif.id, 'deleted')} className="px-4 py-2 border border-border rounded hover:bg-accent text-sm flex items-center gap-2"><X className="w-4 h-4"/> Dismiss</button>
-              {notif.status === 'pending' && notif.type === 'result' && notif.resultId ? (
-                <button onClick={() => onNavigateToResult(notif.resultId, notif.id)} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"><Edit2 className="w-4 h-4"/> Resolve & Edit Result</button>
+              {notif.status === 'pending' && notif.type === 'result' && notif.result_id ? (
+                <button onClick={() => onNavigateToResult(notif.result_id, notif.id)} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"><Edit2 className="w-4 h-4"/> Resolve & Edit Result</button>
               ) : notif.status === 'pending' ? (
                 <button onClick={() => handleStatus(notif.id, 'resolved')} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Resolve</button>
               ) : null}
@@ -1034,9 +1034,10 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
     const progs = await db.get('programs');
     const tms = await db.get('teams');
     const res = await db.get('results');
+    const sortedRes = [...res].sort((a: any, b: any) => (parseInt(b.result_number, 10) || 0) - (parseInt(a.result_number, 10) || 0));
     setPrograms(progs);
     setTeams(tms);
-    setResults(res);
+    setResults(sortedRes);
     if (!editingId) {
       const nextNum = res.length > 0 ? Math.max(...res.map((r:any) => parseInt(r.result_number) || 0)) + 1 : 1;
       setFormData((prev: any) => ({...prev, resultNumber: nextNum.toString()}));
@@ -1094,10 +1095,15 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
       }
     }
 
-    // Save team point updates
-    for (const t of currentTeams) {
-      await db.update('teams', t.id, { points: t.points });
-    }
+    // Save team point updates in parallel, only for teams whose points actually changed
+    const teamUpdatePromises = currentTeams
+      .filter(t => {
+        const originalTeam = teams.find(orig => orig.id === t.id);
+        return !originalTeam || originalTeam.points !== t.points;
+      })
+      .map(t => db.update('teams', t.id, { points: t.points }));
+
+    await Promise.all(teamUpdatePromises);
 
     const newResult = {
       program_id: program.id,
@@ -1167,12 +1173,23 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
     if(confirm('Delete result? This WILL reverse the team points given for this result!')) {
       const oldResult = results.find(r => r.id === id);
       if (oldResult && oldResult.winners) {
+        // Group points adjustments by team to avoid multiple updates to the same team and do them in parallel
+        const pointAdjustments: { [teamName: string]: number } = {};
         for (const w of oldResult.winners) {
-          const teamData = teams.find(t => t.name === w.team);
-          if (teamData) {
-            await db.update('teams', teamData.id, { points: (parseInt(teamData.points) || 0) - parseInt(w.points) });
+          if (w.team && w.points) {
+            pointAdjustments[w.team] = (pointAdjustments[w.team] || 0) - parseInt(w.points);
           }
         }
+
+        const teamUpdatePromises = Object.entries(pointAdjustments).map(async ([teamName, adjustment]) => {
+          const teamData = teams.find(t => t.name === teamName);
+          if (teamData) {
+            const newPoints = (parseInt(teamData.points) || 0) + adjustment;
+            return db.update('teams', teamData.id, { points: newPoints });
+          }
+        });
+        
+        await Promise.all(teamUpdatePromises.filter(Boolean));
       }
       await db.delete('results', id);
       fetchData();

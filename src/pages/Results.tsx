@@ -45,8 +45,9 @@ export default function Results() {
         };
       });
 
-      // Filter results to only show those up to the publish limit
-      const visibleResults = limit !== null ? res.filter(r => (parseInt(r.result_number) || 0) <= limit) : res;
+      // Filter results to only show those up to the publish limit and sort by result_number descending
+      const sortedResults = [...res].sort((a: any, b: any) => (parseInt(b.result_number, 10) || 0) - (parseInt(a.result_number, 10) || 0));
+      const visibleResults = limit !== null ? sortedResults.filter(r => (parseInt(r.result_number) || 0) <= limit) : sortedResults;
 
       setPublishLimit(limit);
       setResults(visibleResults);
