@@ -1091,7 +1091,7 @@ function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess 
       setTeams(tms);
       setResults(res);
 
-      const r = res.find((x: any) => x.id === resultId);
+      const r = res.find((x: any) => Number(x.id) === Number(resultId));
       if (r) {
         setFormData({ programId: r.program_id ? r.program_id.toString() : '', resultNumber: r.result_number });
         
@@ -1141,7 +1141,7 @@ function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess 
     let currentTeams = [...teams];
 
     // Reverse the old points first
-    const oldResult = results.find(r => r.id === resultId);
+    const oldResult = results.find(r => Number(r.id) === Number(resultId));
     if (oldResult && oldResult.winners) {
       for (const w of oldResult.winners) {
         const tIdx = currentTeams.findIndex(t => t.name === w.team);
