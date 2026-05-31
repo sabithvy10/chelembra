@@ -14,7 +14,7 @@ export default function Results() {
 
   useEffect(() => {
     Promise.all([
-      db.get('results'),
+      db.getResultsList(),
       db.get('teams'),
       db.get('categories'),
       db.getSetting('publish_results_upto')
@@ -71,12 +71,18 @@ export default function Results() {
     }
   };
 
-  const handleShare = (result: any) => {
-    if (!result.posters || result.posters.length === 0) {
-      alert('There is no poster attached to this result.');
-      return;
+  const handleShare = async (result: any) => {
+    try {
+      const posters = await db.getResultPosters(result.id);
+      if (posters.length === 0) {
+        alert('There is no poster attached to this result.');
+        return;
+      }
+      setSelectedPoster(posters[0]);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to load poster.');
     }
-    setSelectedPoster(result.posters[0]);
   };
 
   const handleDownload = (url: string) => {
@@ -241,7 +247,12 @@ export default function Results() {
                         {result.category || 'Universal'}
                       </span>
                     </div>
-                    <h3 className="text-xl font-bold">{result.title}</h3>
+                    <h3 className="text-xl md:text-2xl font-bold flex items-center gap-4">
+                      <span className="bg-[#facc15] text-black text-sm md:text-base font-black px-4 py-1 rounded-full flex-shrink-0 shadow-md">
+                        #{result.result_number}
+                      </span>
+                      <span className="text-white">{result.title}</span>
+                    </h3>
                   </div>
                   <div className="flex gap-2">
                     <button onClick={() => handleShare(result)} className="p-2 text-foreground/60 hover:text-primary transition-colors rounded-full hover:bg-card" title="Share Poster">

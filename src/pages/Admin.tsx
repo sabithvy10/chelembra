@@ -257,7 +257,7 @@ function DashboardTab() {
 
   useEffect(() => { 
     db.get('teams').then(setTeams); 
-    db.get('results').then(setResults);
+    db.getResultsList().then(setResults);
     db.getSetting('publish_results_upto').then(val => { if (val) setPublishUpto(val); });
   }, []);
 
@@ -1063,7 +1063,7 @@ const WinnerForm = ({ title, winner, setWinner, teams, isRequired, onRemove }: a
 function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess }: any) {
   const [programs, setPrograms] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
-  const [results, setResults] = useState<any[]>([]);
+  const [oldResult, setOldResult] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   
   const [formData, setFormData] = useState<any>({ programId: '', resultNumber: '' });
@@ -1085,13 +1085,12 @@ function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess 
     Promise.all([
       db.get('programs'),
       db.get('teams'),
-      db.get('results')
-    ]).then(([progs, tms, res]) => {
+      db.getResultById(resultId)
+    ]).then(([progs, tms, r]) => {
       setPrograms(progs);
       setTeams(tms);
-      setResults(res);
+      setOldResult(r);
 
-      const r = res.find((x: any) => Number(x.id) === Number(resultId));
       if (r) {
         setFormData({ programId: r.program_id ? r.program_id.toString() : '', resultNumber: r.result_number });
         
@@ -1141,7 +1140,6 @@ function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess 
     let currentTeams = [...teams];
 
     // Reverse the old points first
-    const oldResult = results.find(r => Number(r.id) === Number(resultId));
     if (oldResult && oldResult.winners) {
       for (const w of oldResult.winners) {
         const tIdx = currentTeams.findIndex(t => t.name === w.team);
@@ -1334,7 +1332,7 @@ function ResultsTab({ onEditResult, refreshTrigger }: any) {
   const fetchData = async () => {
     const progs = await db.get('programs');
     const tms = await db.get('teams');
-    const res = await db.get('results');
+    const res = await db.getResultsList();
     const sortedRes = [...res].sort((a: any, b: any) => (parseInt(b.result_number, 10) || 0) - (parseInt(a.result_number, 10) || 0));
     setPrograms(progs);
     setTeams(tms);

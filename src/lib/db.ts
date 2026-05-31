@@ -12,6 +12,35 @@ export const db = {
     return data || [];
   },
 
+  getResultsList: async (): Promise<any[]> => {
+    const { data, error } = await supabase
+      .from('results')
+      .select('id, result_number, program_id, title, category, timestamp, is_hidden, winners')
+      .order('created_at', { ascending: false });
+    if (error) { console.error(`[db.getResultsList]:`, error.message); return []; }
+    return data || [];
+  },
+
+  getResultById: async (id: number | string): Promise<any | null> => {
+    const { data, error } = await supabase
+      .from('results')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) { console.error(`[db.getResultById]:`, error.message); return null; }
+    return data;
+  },
+
+  getResultPosters: async (id: number | string): Promise<string[]> => {
+    const { data, error } = await supabase
+      .from('results')
+      .select('posters')
+      .eq('id', id)
+      .single();
+    if (error || !data) return [];
+    return data.posters || [];
+  },
+
   insert: async (table: string, item: any): Promise<any> => {
     const { data, error } = await supabase
       .from(table)
