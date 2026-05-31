@@ -1246,7 +1246,8 @@ function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess 
                 <div className="border border-gray-400/30 rounded-xl p-6 bg-gray-400/5">
                   <h4 className="font-bold text-gray-400 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Second Place Winners</h4>
                   <div className="flex flex-col md:flex-row gap-8">
-                    <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={true} />
+                    {/* Changed first second-place winner to optional (isRequired={false}) */}
+                    <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={false} />
                     <WinnerForm title="Winner 2" winner={second2} setWinner={setSecond2} teams={teams} isRequired={false} />
                   </div>
                 </div>
@@ -1481,7 +1482,8 @@ function ResultsTab({ onEditResult, refreshTrigger }: any) {
       <div className="border border-gray-400/30 rounded-xl p-6 bg-gray-400/5">
         <h4 className="font-bold text-gray-400 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Second Place Winners</h4>
         <div className="flex flex-col md:flex-row gap-8">
-          <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={true} />
+          {/* Changed first second-place winner to optional (isRequired={false}) */}
+          <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={false} />
           <WinnerForm title="Winner 2" winner={second2} setWinner={setSecond2} teams={teams} isRequired={false} />
         </div>
       </div>
