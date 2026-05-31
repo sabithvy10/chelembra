@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bell, Trophy, LayoutDashboard, Calendar, Newspaper, List, Menu,
   Image as ImageIcon, Video, Settings, Users, LogOut,
@@ -11,13 +11,20 @@ const TABS = ['Dashboard', 'Notifications', 'Results', 'Programs', 'Categories',
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('Dashboard');
-  const [editingResultId, setEditingResultId] = useState<number | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleNavigateToResultEdit = async (resultId: number, notifId: number) => {
-    await db.update('notifications', notifId, { status: 'resolved' });
-    setActiveTab('Results');
-    setEditingResultId(resultId);
+  // Reusable Edit Modal State
+  const [modalResultId, setModalResultId] = useState<number | null>(null);
+  const [modalNotificationId, setModalNotificationId] = useState<number | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleOpenEditModal = (resultId: number, notificationId: number | null = null) => {
+    setModalResultId(resultId);
+    setModalNotificationId(notificationId);
+  };
+
+  const handleModalSuccess = async () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleLogout = () => {
@@ -108,11 +115,21 @@ export default function Admin() {
           transition={{ duration: 0.3 }}
         >
           {activeTab === 'Dashboard' && <DashboardTab />}
-          {activeTab === 'Notifications' && <NotificationsTab onNavigateToResult={handleNavigateToResultEdit} />}
+          {activeTab === 'Notifications' && (
+            <NotificationsTab 
+              onEditResult={handleOpenEditModal} 
+              refreshTrigger={refreshTrigger}
+            />
+          )}
           {activeTab === 'News' && <NewsTab />}
           {activeTab === 'Gallery' && <GalleryTab />}
           {activeTab === 'Videos' && <VideosTab />}
-          {activeTab === 'Results' && <ResultsTab externalEditingId={editingResultId} setExternalEditingId={setEditingResultId} />}
+          {activeTab === 'Results' && (
+            <ResultsTab 
+              onEditResult={(id: number) => handleOpenEditModal(id, null)} 
+              refreshTrigger={refreshTrigger}
+            />
+          )}
           {activeTab === 'Teams' && <TeamsTab />}
           {activeTab === 'About' && <AboutTab />}
           {/* Use generic layouts for the rest for now */}
@@ -123,6 +140,15 @@ export default function Admin() {
         </motion.div>
         </main>
       </div>
+
+      {/* Reusable Edit Modal */}
+      <ResultEditModal
+        isOpen={modalResultId !== null}
+        resultId={modalResultId}
+        notificationId={modalNotificationId}
+        onClose={() => { setModalResultId(null); setModalNotificationId(null); }}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 }
@@ -321,9 +347,9 @@ function DashboardTab() {
   );
 }
 
-function NotificationsTab({ onNavigateToResult }: any) {
+function NotificationsTab({ onEditResult, refreshTrigger }: any) {
   const [notifications, setNotifications] = useState<any[]>([]);
-  useEffect(() => { db.get('notifications').then(setNotifications); }, []);
+  useEffect(() => { db.get('notifications').then(setNotifications); }, [refreshTrigger]);
 
   const handleStatus = async (id: number, status: string) => {
     if (status === 'deleted') {
@@ -347,7 +373,15 @@ function NotificationsTab({ onNavigateToResult }: any) {
       <div className="space-y-4">
         {notifications.length === 0 && <p className="text-foreground/50">No notifications.</p>}
         {notifications.map((notif: any) => (
-          <div key={notif.id} className={`glass-card p-6 border ${notif.status === 'pending' ? 'border-red-500/30' : 'border-green-500/30'} rounded-xl flex justify-between items-start`}>
+          <div 
+            key={notif.id} 
+            className={`glass-card p-6 border ${notif.status === 'pending' ? 'border-red-500/30 hover:border-primary/50 cursor-pointer' : 'border-green-500/30'} rounded-xl flex justify-between items-start transition-all`}
+            onClick={() => {
+              if (notif.status === 'pending' && notif.type === 'result' && notif.result_id) {
+                onEditResult(notif.result_id, notif.id);
+              }
+            }}
+          >
             <div>
               <h3 className="font-bold text-lg mb-1">{notif.title}</h3>
               <p className="text-sm text-foreground/60 mb-2">Reported by: {notif.by}</p>
@@ -355,11 +389,26 @@ function NotificationsTab({ onNavigateToResult }: any) {
               <p className="text-sm">Status: <span className={notif.status === 'pending' ? 'text-yellow-500' : 'text-green-500'}>{notif.status}</span></p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => handleStatus(notif.id, 'deleted')} className="px-4 py-2 border border-border rounded hover:bg-accent text-sm flex items-center gap-2"><X className="w-4 h-4"/> Dismiss</button>
+              <button 
+                onClick={(e) => { e.stopPropagation(); handleStatus(notif.id, 'deleted'); }} 
+                className="px-4 py-2 border border-border rounded hover:bg-accent text-sm flex items-center gap-2"
+              >
+                <X className="w-4 h-4"/> Dismiss
+              </button>
               {notif.status === 'pending' && notif.type === 'result' && notif.result_id ? (
-                <button onClick={() => onNavigateToResult(notif.result_id, notif.id)} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"><Edit2 className="w-4 h-4"/> Resolve & Edit Result</button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); onEditResult(notif.result_id, notif.id); }} 
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"
+                >
+                  <Edit2 className="w-4 h-4"/> Resolve & Edit Result
+                </button>
               ) : notif.status === 'pending' ? (
-                <button onClick={() => handleStatus(notif.id, 'resolved')} className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Resolve</button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleStatus(notif.id, 'resolved'); }} 
+                  className="px-4 py-2 bg-primary text-primary-foreground rounded hover:bg-primary/90 text-sm flex items-center gap-2"
+                >
+                  <CheckCircle className="w-4 h-4"/> Resolve
+                </button>
               ) : null}
             </div>
           </div>
@@ -1011,12 +1060,12 @@ const WinnerForm = ({ title, winner, setWinner, teams, isRequired, onRemove }: a
   </div>
 );
 
-function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
-  const [results, setResults] = useState<any[]>([]);
+function ResultEditModal({ isOpen, resultId, notificationId, onClose, onSuccess }: any) {
   const [programs, setPrograms] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
-  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState<any>({ programId: '', resultNumber: '' });
 
   const defaultWinner = { name: '', team: '', grade: 'A', points: '' };
@@ -1030,31 +1079,50 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
   const [additionalGrades, setAdditionalGrades] = useState<any[]>([]);
   const [posters, setPosters] = useState<string[]>([]);
 
-  const fetchData = async () => {
-    const progs = await db.get('programs');
-    const tms = await db.get('teams');
-    const res = await db.get('results');
-    const sortedRes = [...res].sort((a: any, b: any) => (parseInt(b.result_number, 10) || 0) - (parseInt(a.result_number, 10) || 0));
-    setPrograms(progs);
-    setTeams(tms);
-    setResults(sortedRes);
-    if (!editingId) {
-      const nextNum = res.length > 0 ? Math.max(...res.map((r:any) => parseInt(r.result_number) || 0)) + 1 : 1;
-      setFormData((prev: any) => ({...prev, resultNumber: nextNum.toString()}));
-    }
-  };
-
-  useEffect(() => { fetchData(); }, [editingId]);
-
   useEffect(() => {
-    if (externalEditingId && results.length > 0) {
-      const r = results.find(x => x.id === externalEditingId);
+    if (!isOpen || !resultId) return;
+    setLoading(true);
+    Promise.all([
+      db.get('programs'),
+      db.get('teams'),
+      db.get('results')
+    ]).then(([progs, tms, res]) => {
+      setPrograms(progs);
+      setTeams(tms);
+      setResults(res);
+
+      const r = res.find((x: any) => x.id === resultId);
       if (r) {
-        handleEdit(r);
+        setFormData({ programId: r.program_id ? r.program_id.toString() : '', resultNumber: r.result_number });
+        
+        // reset first
+        setFirst1({...defaultWinner, points: '10', grade: 'A+'});
+        setFirst2({...defaultWinner, points: '10', grade: 'A+'});
+        setSecond1({...defaultWinner, points: '6', grade: 'A'});
+        setSecond2({...defaultWinner, points: '6', grade: 'A'});
+        setThird1({...defaultWinner, points: '2', grade: 'B'});
+        setThird2({...defaultWinner, points: '2', grade: 'B'});
+        setAdditionalGrades([]);
+        setPosters(r.posters || []);
+
+        const w1 = r.winners?.filter((w:any) => w.place === 1) || [];
+        if(w1[0]) setFirst1(w1[0]);
+        if(w1[1]) setFirst2(w1[1]);
+
+        const w2 = r.winners?.filter((w:any) => w.place === 2) || [];
+        if(w2[0]) setSecond1(w2[0]);
+        if(w2[1]) setSecond2(w2[1]);
+
+        const w3 = r.winners?.filter((w:any) => w.place === 3) || [];
+        if(w3[0]) setThird1(w3[0]);
+        if(w3[1]) setThird2(w3[1]);
+
+        const add = r.winners?.filter((w:any) => w.place === 'Additional') || [];
+        setAdditionalGrades(add);
       }
-      setExternalEditingId(null);
-    }
-  }, [externalEditingId, results]);
+      setLoading(false);
+    });
+  }, [isOpen, resultId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1072,15 +1140,13 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
 
     let currentTeams = [...teams];
 
-    // If editing, reverse the old points first
-    if (editingId) {
-      const oldResult = results.find(r => r.id === editingId);
-      if (oldResult && oldResult.winners) {
-        for (const w of oldResult.winners) {
-          const tIdx = currentTeams.findIndex(t => t.name === w.team);
-          if (tIdx !== -1) {
-            currentTeams[tIdx].points = (parseInt(currentTeams[tIdx].points) || 0) - parseInt(w.points);
-          }
+    // Reverse the old points first
+    const oldResult = results.find(r => r.id === resultId);
+    if (oldResult && oldResult.winners) {
+      for (const w of oldResult.winners) {
+        const tIdx = currentTeams.findIndex(t => t.name === w.team);
+        if (tIdx !== -1) {
+          currentTeams[tIdx].points = (parseInt(currentTeams[tIdx].points) || 0) - parseInt(w.points);
         }
       }
     }
@@ -1115,16 +1181,220 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
       posters: posters
     };
 
-    if (editingId) {
-      await db.update('results', editingId, newResult);
-      alert('Result updated successfully!');
-    } else {
-      await db.insert('results', newResult);
-      alert('Result published and team points updated successfully!');
+    await db.update('results', resultId, newResult);
+
+    // If there is a notification ID, update it to resolved
+    if (notificationId) {
+      await db.update('notifications', notificationId, { status: 'resolved' });
     }
+
+    alert('Result updated successfully!');
+    if (onSuccess) await onSuccess();
+    onClose();
+  };
+
+  const handlePostersUpload = (e: any) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file: any) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPosters(prev => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto pt-10">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="bg-[#111] border border-border/50 rounded-2xl p-6 md:p-8 w-full max-w-4xl relative shadow-2xl mb-20"
+          >
+            <button type="button" onClick={onClose} className="absolute top-6 right-6 text-foreground/50 hover:text-white p-2 bg-black/40 rounded-full z-10"><X className="w-6 h-6"/></button>
+            <h3 className="text-2xl font-bold mb-8 flex items-center gap-2 text-primary"><Edit2 className="w-6 h-6"/> Edit Competition Result</h3>
+            
+            {loading ? (
+              <div className="text-center py-20 text-foreground/50">Loading result data...</div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-8">
+                <div className="space-y-4 max-w-2xl">
+                  <div>
+                    <label className="block text-sm mb-2 text-foreground/80">Program *</label>
+                    <select required value={formData.programId} onChange={e => setFormData({...formData, programId: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none">
+                      <option value="">Select program</option>
+                      {programs.map(p => <option key={p.id} value={p.id}>{p.title} ({p.category})</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm mb-2 text-foreground/80">Result Number</label>
+                    <input required type="number" value={formData.resultNumber} onChange={e => setFormData({...formData, resultNumber: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none" />
+                  </div>
+                </div>
+
+                {/* First Place Winners */}
+                <div className="border border-orange-500/30 rounded-xl p-6 bg-orange-500/5">
+                  <h4 className="font-bold text-orange-500 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> First Place Winners</h4>
+                  <div className="flex flex-col md:flex-row gap-8">
+                    <WinnerForm title="Winner 1" winner={first1} setWinner={setFirst1} teams={teams} isRequired={true} />
+                    <WinnerForm title="Winner 2" winner={first2} setWinner={setFirst2} teams={teams} isRequired={false} />
+                  </div>
+                </div>
+                
+                {/* Second Place Winners */}
+                <div className="border border-gray-400/30 rounded-xl p-6 bg-gray-400/5">
+                  <h4 className="font-bold text-gray-400 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Second Place Winners</h4>
+                  <div className="flex flex-col md:flex-row gap-8">
+                    <WinnerForm title="Winner 1" winner={second1} setWinner={setSecond1} teams={teams} isRequired={true} />
+                    <WinnerForm title="Winner 2" winner={second2} setWinner={setSecond2} teams={teams} isRequired={false} />
+                  </div>
+                </div>
+
+                {/* Third Place Winners */}
+                <div className="border border-amber-700/30 rounded-xl p-6 bg-amber-700/5">
+                  <h4 className="font-bold text-amber-600 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Third Place Winners</h4>
+                  <div className="flex flex-col md:flex-row gap-8">
+                    {/* Changed first third-place winner to optional (isRequired={false}) */}
+                    <WinnerForm title="Winner 1" winner={third1} setWinner={setThird1} teams={teams} isRequired={false} />
+                    <WinnerForm title="Winner 2" winner={third2} setWinner={setThird2} teams={teams} isRequired={false} />
+                  </div>
+                </div>
+
+                {/* Additional Grades */}
+                <div className="border border-border/50 rounded-xl p-6 bg-black/20">
+                  <div className="flex justify-between items-center mb-6">
+                    <h4 className="font-bold text-foreground/80 flex items-center gap-2"><Trophy className="w-5 h-5"/> Additional Grades (Optional)</h4>
+                    <button type="button" onClick={() => setAdditionalGrades([...additionalGrades, { id: Date.now(), name: '', team: '', grade: 'A', points: '1', place: 'Additional' }])} className="flex items-center gap-1 text-sm bg-accent px-3 py-1.5 rounded hover:bg-white/10"><Plus className="w-4 h-4"/> Add Grade</button>
+                  </div>
+                  <div className="space-y-6">
+                    {additionalGrades.map((g, index) => (
+                      <WinnerForm 
+                        key={g.id} 
+                        title={`Additional Grade ${index + 1}`} 
+                        winner={g} 
+                        setWinner={(newW: any) => setAdditionalGrades(additionalGrades.map(x => x.id === g.id ? newW : x))} 
+                        teams={teams} 
+                        isRequired={true}
+                        onRemove={() => setAdditionalGrades(additionalGrades.filter(x => x.id !== g.id))}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {/* Result Posters */}
+                <div className="border border-border/50 rounded-xl p-6 bg-black/20">
+                  <h4 className="font-bold text-foreground/80 mb-6 flex items-center gap-2"><ImageIcon className="w-5 h-5"/> Result Posters (Optional)</h4>
+                  <div>
+                    <label className="block text-sm mb-2 text-foreground/60">Upload Posters</label>
+                    <div className="relative w-full bg-black/40 border border-border rounded-lg p-3 hover:border-primary/50 transition-colors">
+                      <input type="file" multiple accept="image/*" onChange={handlePostersUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+                      <p className="text-foreground/60 text-sm font-semibold">Choose Files <span className="font-normal text-xs ml-2">{posters.length > 0 ? `${posters.length} file(s) chosen` : 'No file chosen'}</span></p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <button type="submit" className="flex-grow bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-lg transition-colors text-lg shadow-[0_0_20px_rgba(249,115,22,0.3)]">
+                    Update Result
+                  </button>
+                  <button type="button" onClick={onClose} className="bg-transparent border border-border hover:bg-card text-foreground font-bold py-4 px-8 rounded-lg transition-colors text-lg">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function ResultsTab({ onEditResult, refreshTrigger }: any) {
+  const [results, setResults] = useState<any[]>([]);
+  const [programs, setPrograms] = useState<any[]>([]);
+  const [teams, setTeams] = useState<any[]>([]);
+  
+  const [formData, setFormData] = useState<any>({ programId: '', resultNumber: '' });
+
+  const defaultWinner = { name: '', team: '', grade: 'A', points: '' };
+  const [first1, setFirst1] = useState({...defaultWinner, points: '10', grade: 'A+'});
+  const [first2, setFirst2] = useState({...defaultWinner, points: '10', grade: 'A+'});
+  const [second1, setSecond1] = useState({...defaultWinner, points: '6', grade: 'A'});
+  const [second2, setSecond2] = useState({...defaultWinner, points: '6', grade: 'A'});
+  const [third1, setThird1] = useState({...defaultWinner, points: '2', grade: 'B'});
+  const [third2, setThird2] = useState({...defaultWinner, points: '2', grade: 'B'});
+
+  const [additionalGrades, setAdditionalGrades] = useState<any[]>([]);
+  const [posters, setPosters] = useState<string[]>([]);
+
+  const fetchData = async () => {
+    const progs = await db.get('programs');
+    const tms = await db.get('teams');
+    const res = await db.get('results');
+    const sortedRes = [...res].sort((a: any, b: any) => (parseInt(b.result_number, 10) || 0) - (parseInt(a.result_number, 10) || 0));
+    setPrograms(progs);
+    setTeams(tms);
+    setResults(sortedRes);
+    const nextNum = res.length > 0 ? Math.max(...res.map((r:any) => parseInt(r.result_number) || 0)) + 1 : 1;
+    setFormData((prev: any) => ({...prev, resultNumber: nextNum.toString()}));
+  };
+
+  useEffect(() => { fetchData(); }, [refreshTrigger]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    const program = programs.find(p => p.id.toString() === formData.programId);
+    if (!program) return alert('Select a program');
+
+    const winnersToSave: any[] = [];
+    const allWinners = [
+      { ...first1, place: 1 }, { ...first2, place: 1 },
+      { ...second1, place: 2 }, { ...second2, place: 2 },
+      { ...third1, place: 3 }, { ...third2, place: 3 },
+      ...additionalGrades
+    ];
+
+    let currentTeams = [...teams];
+
+    for (const w of allWinners) {
+      if (w.name && w.team) {
+        winnersToSave.push(w);
+        const tIdx = currentTeams.findIndex(t => t.name === w.team);
+        if (tIdx !== -1) {
+          currentTeams[tIdx].points = (parseInt(currentTeams[tIdx].points) || 0) + parseInt(w.points);
+        }
+      }
+    }
+
+    // Save team point updates in parallel, only for teams whose points actually changed
+    const teamUpdatePromises = currentTeams
+      .filter(t => {
+        const originalTeam = teams.find(orig => orig.id === t.id);
+        return !originalTeam || originalTeam.points !== t.points;
+      })
+      .map(t => db.update('teams', t.id, { points: t.points }));
+
+    await Promise.all(teamUpdatePromises);
+
+    const newResult = {
+      program_id: program.id,
+      title: program.title,
+      category: program.category,
+      result_number: formData.resultNumber,
+      timestamp: new Date().toLocaleString(),
+      winners: winnersToSave,
+      posters: posters
+    };
+
+    await db.insert('results', newResult);
+    alert('Result published and team points updated successfully!');
     
     // Reset
-    setEditingId(null);
     setFormData({ programId: '', resultNumber: '' });
     setFirst1({...defaultWinner, points: '10', grade: 'A+'});
     setFirst2({...defaultWinner, points: '10', grade: 'A+'});
@@ -1135,38 +1405,6 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
     setAdditionalGrades([]);
     setPosters([]);
     fetchData();
-  };
-
-  const handleEdit = (r: any) => {
-    setEditingId(r.id);
-    setFormData({ programId: r.programId ? r.programId.toString() : '', resultNumber: r.resultNumber });
-    
-    // reset first
-    setFirst1({...defaultWinner, points: '10', grade: 'A+'});
-    setFirst2({...defaultWinner, points: '10', grade: 'A+'});
-    setSecond1({...defaultWinner, points: '6', grade: 'A'});
-    setSecond2({...defaultWinner, points: '6', grade: 'A'});
-    setThird1({...defaultWinner, points: '2', grade: 'B'});
-    setThird2({...defaultWinner, points: '2', grade: 'B'});
-    setAdditionalGrades([]);
-    setPosters(r.posters || []);
-
-    const w1 = r.winners?.filter((w:any) => w.place === 1) || [];
-    if(w1[0]) setFirst1(w1[0]);
-    if(w1[1]) setFirst2(w1[1]);
-
-    const w2 = r.winners?.filter((w:any) => w.place === 2) || [];
-    if(w2[0]) setSecond1(w2[0]);
-    if(w2[1]) setSecond2(w2[1]);
-
-    const w3 = r.winners?.filter((w:any) => w.place === 3) || [];
-    if(w3[0]) setThird1(w3[0]);
-    if(w3[1]) setThird2(w3[1]);
-
-    const add = r.winners?.filter((w:any) => w.place === 'Additional') || [];
-    setAdditionalGrades(add);
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id: number) => {
@@ -1220,7 +1458,7 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
           <select required value={formData.programId} onChange={e => setFormData({...formData, programId: e.target.value})} className="w-full bg-black/40 border border-border rounded-lg p-3 text-white focus:border-primary outline-none">
             <option value="">Select program</option>
             {programs
-              .filter(p => editingId ? p.id.toString() === formData.programId || !results.some((r:any) => r.program_id === p.id) : !results.some((r:any) => r.program_id === p.id))
+              .filter(p => !results.some((r:any) => r.program_id === p.id))
               .map(p => <option key={p.id} value={p.id}>{p.title} ({p.category})</option>)
             }
           </select>
@@ -1254,7 +1492,8 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
       <div className="border border-amber-700/30 rounded-xl p-6 bg-amber-700/5">
         <h4 className="font-bold text-amber-600 mb-6 flex items-center gap-2"><Medal className="w-5 h-5"/> Third Place Winners</h4>
         <div className="flex flex-col md:flex-row gap-8">
-          <WinnerForm title="Winner 1" winner={third1} setWinner={setThird1} teams={teams} isRequired={true} />
+          {/* Changed first third-place winner to optional (isRequired={false}) */}
+          <WinnerForm title="Winner 1" winner={third1} setWinner={setThird1} teams={teams} isRequired={false} />
           <WinnerForm title="Winner 2" winner={third2} setWinner={setThird2} teams={teams} isRequired={false} />
         </div>
       </div>
@@ -1294,34 +1533,17 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
       </div>
 
       <button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-4 rounded-lg transition-colors text-lg shadow-[0_0_20px_rgba(249,115,22,0.3)] hover:shadow-[0_0_30px_rgba(249,115,22,0.5)]">
-        {editingId ? 'Update Result' : 'Publish Result & Update Points'}
+        Publish Result & Update Points
       </button>
-      {editingId && (
-         <button type="button" onClick={() => { setEditingId(null); setFormData({programId: '', resultNumber: ''}); setAdditionalGrades([]); setPosters([]); }} className="w-full bg-transparent border border-border hover:bg-card text-foreground font-bold py-4 rounded-lg transition-colors text-lg mt-4">
-          Cancel Edit
-        </button>
-      )}
     </form>
   );
 
   return (
     <div className="space-y-8">
-      {!editingId && (
-        <div className="glass-card p-6 border border-border/50 rounded-2xl">
-          <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Plus className="w-5 h-5"/> Add Competition Result</h3>
-          {ResultFormJSX}
-        </div>
-      )}
-
-      {editingId && (
-        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-start justify-center p-4 overflow-y-auto pt-10">
-          <div className="bg-[#111] border border-border/50 rounded-2xl p-6 md:p-8 w-full max-w-4xl relative shadow-2xl mb-20">
-             <button type="button" onClick={() => { setEditingId(null); setFormData({programId: '', resultNumber: ''}); setAdditionalGrades([]); setPosters([]); }} className="absolute top-6 right-6 text-foreground/50 hover:text-white p-2 bg-black/40 rounded-full z-10"><X className="w-6 h-6"/></button>
-             <h3 className="text-2xl font-bold mb-8 flex items-center gap-2 text-primary"><Edit2 className="w-6 h-6"/> Edit Competition Result</h3>
-             {ResultFormJSX}
-          </div>
-        </div>
-      )}
+      <div className="glass-card p-6 border border-border/50 rounded-2xl">
+        <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Plus className="w-5 h-5"/> Add Competition Result</h3>
+        {ResultFormJSX}
+      </div>
 
       <div className="glass-card p-6 border border-border/50 rounded-2xl">
         <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Trophy className="w-5 h-5"/> Manage Results</h3>
@@ -1339,9 +1561,9 @@ function ResultsTab({ externalEditingId, setExternalEditingId }: any) {
                 </div>
                 <div className="flex gap-2">
                   <button title={r.is_hidden ? "Make Visible" : "Hide Result"} onClick={() => handleToggleVisibility(r.id, !!r.is_hidden)} className={`${r.is_hidden ? 'text-gray-400 hover:bg-gray-400/20' : 'text-green-500 hover:bg-green-500/20'} p-2 rounded`}>
-                    {r.isHidden ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                    {r.is_hidden ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
                   </button>
-                  <button title="Edit Result" onClick={() => handleEdit(r)} className="text-blue-500 hover:bg-blue-500/20 p-2 rounded"><Edit2 className="w-4 h-4"/></button>
+                  <button title="Edit Result" onClick={() => onEditResult(r.id)} className="text-blue-500 hover:bg-blue-500/20 p-2 rounded"><Edit2 className="w-4 h-4"/></button>
                   <button title="Delete Result" onClick={() => handleDelete(r.id)} className="text-red-500 hover:bg-red-500/20 p-2 rounded"><Trash2 className="w-4 h-4"/></button>
                 </div>
               </div>
